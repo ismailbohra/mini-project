@@ -1,8 +1,8 @@
 from datetime import datetime
-from enum import Enum as PyEnum
 
+from app.auth.model import RoleType
 from app.config.database import Base
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -13,6 +13,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String, unique=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String)
+    role: Mapped[RoleType] = mapped_column(Enum(RoleType), default=RoleType.USER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -26,4 +27,3 @@ class User(Base):
     comments = relationship("Comment", back_populates="author")
     post_likes = relationship("PostLike", back_populates="user")
     comment_likes = relationship("CommentLike", back_populates="user")
-    roles = relationship("UserRole", back_populates="user")

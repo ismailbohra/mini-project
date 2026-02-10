@@ -1,6 +1,12 @@
-from app.users.router import router as users_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.admin.router import router as admin_router
+from app.auth.router import router as auth_router
+from app.comments.model import Comment, CommentLike
+from app.posts.model import PostLike, Posts
+from app.users.model import User
+from app.users.router import router as users_router
 
 app = FastAPI(
     title="Mini Project API",
@@ -10,10 +16,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://www.example.com"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(admin_router)

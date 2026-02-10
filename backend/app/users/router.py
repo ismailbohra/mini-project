@@ -1,23 +1,31 @@
-from typing import List
-
+from app.auth.dependency import get_current_user_id
 from app.users.dependency import get_user_service
-from app.users.schema import RoleAssign, UserCreate, UserResponse, UserUpdate
+from app.users.schema import UserCreate, UserResponse, UserUpdate
 from app.users.service import UserService
 from fastapi import APIRouter, Depends, status
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(prefix="/users", tags=["User"])
 
 
-@router.get("/", response_model=List[UserResponse])
-async def get_all_users(
-    skip: int = 0,
-    limit: int = 100,
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get current user",
+    description="Get information about the currently authenticated user",
+)
+async def get_current_user(
+    user_id: int = Depends(get_current_user_id),
     service: UserService = Depends(get_user_service),
-):
+) -> UserResponse:
     """
-    Get all users
+    Get current user information including:
+    - User details (id, username, email)
+    - Active status
+    - Assigned roles
+
+    Requires valid JWT token in Authorization header.
     """
-    return await service.get_users(skip=skip, limit=limit)
+    return await service.get_user(user_id)
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -56,16 +64,3 @@ async def delete_user(user_id: int, service: UserService = Depends(get_user_serv
     Delete a user
     """
     await service.delete_user(user_id)
-
-
-@router.patch("/{user_id}/role", response_model=UserResponse)
-async def assign_role(
-    user_id: int,
-    role_assign: RoleAssign,
-    service: UserService = Depends(get_user_service),
-):
-    """
-    Assign a role to a user.
-    Roles: Admin, User, moderator
-    """
-    return await service.assign_role(user_id, role_assign)

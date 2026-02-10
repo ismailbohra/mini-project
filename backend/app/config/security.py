@@ -7,15 +7,15 @@ from typing import Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from .settings import settings
 
-# JWT settings - should be moved to settings.py in production
-SECRET_KEY = (
-    "your-secret-key-change-this-in-production-use-env-variable"  # Change this!
-)
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Password hashing context
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+# JWT settings from environment
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 1
 EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS = 24

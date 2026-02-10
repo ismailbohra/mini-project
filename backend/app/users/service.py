@@ -2,8 +2,8 @@ from typing import List
 
 from app.config.security import get_password_hash
 from app.users.interface import UserRepositoryInterface
-from app.users.model import User, UserRole
-from app.users.schema import RoleAssign, UserCreate, UserUpdate
+from app.users.model import User
+from app.users.schema import UserCreate, UserUpdate
 from app.utils.exceptions import UserAlreadyExistsException, UserNotFoundException
 
 
@@ -61,7 +61,3 @@ class UserService:
     async def delete_user(self, user_id: int) -> None:
         user = await self.get_user(user_id)
         await self.repository.delete(user)
-
-    async def assign_role(self, user_id: int, role_assign: RoleAssign) -> User:
-        user = await self.get_user(user_id)
-        return await self.repository.update(user, {"role": role_assign.role})

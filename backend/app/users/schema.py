@@ -1,14 +1,13 @@
+# app/users/schema.py
 from datetime import datetime
 from typing import Optional
 
-from app.users.model import UserRole
 from pydantic import BaseModel, EmailStr
 
 
 class UserBase(BaseModel):
     username: str
     email: EmailStr
-    role: UserRole = UserRole.USER
     is_active: bool = True
 
 
@@ -23,14 +22,10 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
-class RoleAssign(BaseModel):
-    role: UserRole
-
-
 class UserResponse(UserBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    role: str
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

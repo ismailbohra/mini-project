@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from app.auth.model import UserRole
+from app.auth.model import RoleType
 from app.comments.model import Comment, CommentLike
 from app.config.database import Base
 from app.config.settings import settings

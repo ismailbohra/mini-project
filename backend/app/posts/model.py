@@ -1,8 +1,17 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 
 from app.config.database import Base
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+class ReportStatus(PyEnum):
+    """Status of a report."""
+
+    PENDING = "Pending"
+    REVIEWED = "Reviewed"
+    DISMISSED = "Dismissed"
 
 
 class Posts(Base):
@@ -57,3 +66,24 @@ class PostLike(Base):
 
     user = relationship("User", back_populates="post_likes")
     post = relationship("Posts", back_populates="likes")
+
+
+class PostReport(Base):
+    __tablename__ = "post_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    reason: Mapped[str] = mapped_column(String)
+    status: Mapped[ReportStatus] = mapped_column(
+        Enum(ReportStatus), default=ReportStatus.PENDING
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user = relationship("User")
+    post = relationship("Posts")

@@ -48,3 +48,20 @@ class PostLikeResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PostReportCreate(BaseModel):
+    post_id: int
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+class PostReportResponse(BaseModel):
+    id: int
+    user_id: int
+    post_id: int
+    reason: str
+    status: str
+    created_at: datetime
+    reviewed_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}

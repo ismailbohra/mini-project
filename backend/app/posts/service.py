@@ -6,6 +6,7 @@ from app.posts.model import Posts
 from app.posts.schema import (
     PostCreate,
     PostLikeResponse,
+    PostReportResponse,
     PostResponse,
     PostUpdate,
     TagResponse,
@@ -157,3 +158,28 @@ class PostService:
     async def get_post_likes_count(self, post_id: int) -> int:
         """Get count of likes for a post."""
         return await self.repository.get_post_likes_count(post_id)
+
+    async def report_post(
+        self, user_id: int, post_id: int, reason: str
+    ) -> PostReportResponse:
+        """Report a post."""
+        # Check if post exists
+        post = await self.repository.get_post_by_id(post_id)
+        if not post:
+            raise NotFoundException(f"Post with id {post_id} not found")
+
+        # Check if user already reported this post
+        existing_report = await self.repository.get_post_report(user_id, post_id)
+        if existing_report:
+            raise ForbiddenException("You have already reported this post")
+
+        report = await self.repository.create_post_report(user_id, post_id, reason)
+        return PostReportResponse(
+            id=report.id,
+            user_id=report.user_id,
+            post_id=report.post_id,
+            reason=report.reason,
+            status=report.status.value,
+            created_at=report.created_at,
+            reviewed_at=report.reviewed_at,
+        )

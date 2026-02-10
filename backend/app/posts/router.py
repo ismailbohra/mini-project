@@ -3,7 +3,13 @@ from typing import List
 
 from app.auth.dependency import get_current_user_id
 from app.posts.dependency import get_post_service
-from app.posts.schema import PostCreate, PostLikeResponse, PostResponse, PostUpdate
+from app.posts.schema import (
+    PostCreate,
+    PostLikeResponse,
+    PostReportResponse,
+    PostResponse,
+    PostUpdate,
+)
 from app.posts.service import PostService
 from fastapi import APIRouter, Depends, Query, status
 
@@ -152,3 +158,20 @@ async def get_post_likes_count(
 ):
     """Get the count of likes for a post."""
     return await post_service.get_post_likes_count(post_id)
+
+
+# Post Report endpoint
+@router.post(
+    "/{post_id}/report",
+    response_model=PostReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Report a post",
+)
+async def report_post(
+    post_id: int,
+    reason: str = Query(..., min_length=1, max_length=500),
+    user_id: int = Depends(get_current_user_id),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Report a post for review. User must be authenticated."""
+    return await post_service.report_post(user_id, post_id, reason)

@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.posts.model import PostLike, Posts, Tags
+from app.posts.model import PostLike, PostReport, Posts, Tags
 
 
 class PostRepositoryInterface(ABC):
@@ -85,4 +85,32 @@ class PostRepositoryInterface(ABC):
     @abstractmethod
     async def get_post_likes_count(self, post_id: int) -> int:
         """Get count of likes for a post."""
+        pass
+
+    @abstractmethod
+    async def create_post_report(
+        self, user_id: int, post_id: int, reason: str
+    ) -> PostReport:
+        """Create a post report."""
+        pass
+
+    @abstractmethod
+    async def get_post_report(
+        self, user_id: int, post_id: int
+    ) -> Optional[PostReport]:
+        """Get a specific post report by user and post."""
+        pass
+
+    @abstractmethod
+    async def get_pending_post_reports(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[PostReport]:
+        """Get all pending post reports."""
+        pass
+
+    @abstractmethod
+    async def update_report_status(
+        self, report: PostReport, status: str
+    ) -> PostReport:
+        """Update report status."""
         pass

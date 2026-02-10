@@ -3,11 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
-from app.comments.model import Comment, CommentLike
 from app.comments.router import router as comments_router
-from app.posts.model import PostLike, Posts
+from app.moderator.router import router as moderator_router
 from app.posts.router import router as posts_router
-from app.users.model import User
 from app.users.router import router as users_router
 
 app = FastAPI(
@@ -29,3 +27,4 @@ app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(posts_router)
 app.include_router(comments_router)
+app.include_router(moderator_router)

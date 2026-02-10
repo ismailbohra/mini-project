@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 from app.posts.interface import PostRepositoryInterface
-from app.posts.model import PostLike, Posts, PostTag, Tags
+from app.posts.model import PostLike, PostReport, Posts, PostTag, ReportStatus, Tags
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -162,3 +162,50 @@ class PostRepository(PostRepositoryInterface):
         )
         result = await self.session.execute(query)
         return result.scalar() or 0
+
+    async def create_post_report(
+        self, user_id: int, post_id: int, reason: str
+    ) -> PostReport:
+        """Create a post report."""
+        report = PostReport(user_id=user_id, post_id=post_id, reason=reason)
+        self.session.add(report)
+        await self.session.commit()
+        await self.session.refresh(report)
+        return report
+
+    async def get_post_report(
+        self, user_id: int, post_id: int
+    ) -> Optional[PostReport]:
+        """Get a specific post report by user and post."""
+        query = select(PostReport).where(
+            PostReport.user_id == user_id, PostReport.post_id == post_id
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_pending_post_reports(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[PostReport]:
+        """Get all pending post reports."""
+        query = (
+            select(PostReport)
+            .where(PostReport.status == ReportStatus.PENDING)
+            .offset(skip)
+            .limit(limit)
+            .order_by(PostReport.created_at.desc())
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def update_report_status(
+        self, report: PostReport, status: str
+    ) -> PostReport:
+        """Update report status."""
+        from datetime import datetime
+
+        report.status = ReportStatus[status.upper()]
+        if status.upper() in ["REVIEWED", "DISMISSED"]:
+            report.reviewed_at = datetime.utcnow()
+        await self.session.commit()
+        await self.session.refresh(report)
+        return report

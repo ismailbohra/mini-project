@@ -28,7 +28,7 @@ class AuthService:
     async def login(self, request: UserLoginRequest) -> TokenResponse:
         """Login user and return JWT token."""
         # Get user by username
-        user = await self.repository.get_user_by_username(request.username)
+        user = await self.repository.get_user_by_email(request.email)
 
         if not user:
             raise UnauthorizedException("Invalid username or password")

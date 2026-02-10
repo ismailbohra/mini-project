@@ -1,9 +1,9 @@
 from app.users.schema import UserResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserLoginRequest(BaseModel):
-    username: str
+    email: EmailStr = Field(..., example="ismailbohra99@gmail.com")
     password: str
 
 

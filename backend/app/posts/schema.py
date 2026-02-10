@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class AuthorResponse(BaseModel):
     """Basic author information for responses."""
+
     id: int
     username: str
     email: str
@@ -44,6 +45,7 @@ class PostResponse(BaseModel):
     updated_at: datetime
     likes_count: int = 0
     user_has_liked: bool = False
+    comments_count: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -75,5 +77,9 @@ class PostReportResponse(BaseModel):
     status: str
     created_at: datetime
     reviewed_at: Optional[datetime]
+    # Enriched fields
+    post_title: Optional[str] = None
+    post_author_id: Optional[int] = None
+    reporter_username: Optional[str] = None
 
     model_config = {"from_attributes": True}

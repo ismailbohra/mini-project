@@ -20,7 +20,12 @@ class PostService:
     def __init__(self, repository: PostRepositoryInterface):
         self.repository = repository
 
-    async def create_post(self, author_id: int, post_data: PostCreate, current_user_id: Optional[int] = None) -> PostResponse:
+    async def create_post(
+        self,
+        author_id: int,
+        post_data: PostCreate,
+        current_user_id: Optional[int] = None,
+    ) -> PostResponse:
         """Create a new post with tags."""
         # Create the post
         post = await self.repository.create_post(
@@ -43,7 +48,9 @@ class PostService:
         post_with_tags = await self.repository.get_post_by_id(post.id)
         return await self._post_to_response(post_with_tags, current_user_id)
 
-    async def get_post(self, post_id: int, current_user_id: Optional[int] = None) -> PostResponse:
+    async def get_post(
+        self, post_id: int, current_user_id: Optional[int] = None
+    ) -> PostResponse:
         """Get a post by ID."""
         post = await self.repository.get_post_by_id(post_id)
         if not post:
@@ -51,7 +58,11 @@ class PostService:
         return await self._post_to_response(post, current_user_id)
 
     async def get_user_posts(
-        self, author_id: int, skip: int = 0, limit: int = 100, current_user_id: Optional[int] = None
+        self,
+        author_id: int,
+        skip: int = 0,
+        limit: int = 100,
+        current_user_id: Optional[int] = None,
     ) -> List[PostResponse]:
         """Get all posts by a user."""
         posts = await self.repository.get_posts_by_author(author_id, skip, limit)
@@ -65,7 +76,11 @@ class PostService:
         return [await self._post_to_response(post, current_user_id) for post in posts]
 
     async def update_post(
-        self, post_id: int, author_id: int, post_data: PostUpdate, current_user_id: Optional[int] = None
+        self,
+        post_id: int,
+        author_id: int,
+        post_data: PostUpdate,
+        current_user_id: Optional[int] = None,
     ) -> PostResponse:
         """Update a post."""
         post = await self.repository.get_post_by_id(post_id)
@@ -110,7 +125,9 @@ class PostService:
 
         await self.repository.delete_post(post)
 
-    async def _post_to_response(self, post: Posts, current_user_id: Optional[int] = None) -> PostResponse:
+    async def _post_to_response(
+        self, post: Posts, current_user_id: Optional[int] = None
+    ) -> PostResponse:
         """Convert Post model to PostResponse."""
         # Extract tags from post_tags relationship
         tags = [TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in post.tags]
@@ -127,6 +144,7 @@ class PostService:
 
         # Get likes count
         likes_count = await self.repository.get_post_likes_count(post.id)
+        comments_count = await self.repository.get_post_comments_count(post.id)
 
         # Check if current user has liked this post
         user_has_liked = False
@@ -144,6 +162,7 @@ class PostService:
             created_at=post.created_at,
             updated_at=post.updated_at,
             likes_count=likes_count,
+            comments_count=comments_count,
             user_has_liked=user_has_liked,
         )
 

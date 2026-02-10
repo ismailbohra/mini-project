@@ -12,6 +12,7 @@ class ReportStatus(PyEnum):
     PENDING = "Pending"
     REVIEWED = "Reviewed"
     DISMISSED = "Dismissed"
+    DELETED = "Deleted"
 
 
 class Posts(Base):
@@ -76,7 +77,8 @@ class PostReport(Base):
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
     reason: Mapped[str] = mapped_column(String)
     status: Mapped[ReportStatus] = mapped_column(
-        Enum(ReportStatus), default=ReportStatus.PENDING
+        Enum(ReportStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ReportStatus.PENDING,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

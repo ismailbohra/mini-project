@@ -42,8 +42,9 @@ export const moderatorService = {
   },
 
   // Delete any post (Moderator)
-  deleteAnyPost: async (postId) => {
-    await api.delete(`/moderator/posts/${postId}`);
+  deleteAnyPost: async (postId, reportId = null) => {
+    const params = reportId ? { report_id: reportId } : {};
+    await api.delete(`/moderator/posts/${postId}`, { params });
   },
 
   // Update any comment (Moderator)
@@ -53,8 +54,9 @@ export const moderatorService = {
   },
 
   // Delete any comment (Moderator)
-  deleteAnyComment: async (commentId) => {
-    await api.delete(`/moderator/comments/${commentId}`);
+  deleteAnyComment: async (commentId, reportId = null) => {
+    const params = reportId ? { report_id: reportId } : {};
+    await api.delete(`/moderator/comments/${commentId}`, { params });
   },
 };
 

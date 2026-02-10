@@ -17,13 +17,34 @@ const PostDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ title: '', description: '', tags: [] });
-  const [allTags, setAllTags] = useState([]);
+  const [detectedTags, setDetectedTags] = useState([]);
 
   useEffect(() => {
     loadPost();
     loadComments();
-    loadTags();
   }, [postId]);
+
+  useEffect(() => {
+    if (isEditing) {
+      const tags = extractTagsFromDescription(editData.description);
+      setDetectedTags(tags);
+    }
+  }, [editData.description, isEditing]);
+
+  const extractTagsFromDescription = (description) => {
+    const tagPattern = /#(\w+)/g;
+    const matches = description.matchAll(tagPattern);
+    const extractedTags = [];
+
+    for (const match of matches) {
+      const tagName = match[1];
+      if (!extractedTags.includes(tagName)) {
+        extractedTags.push(tagName);
+      }
+    }
+
+    return extractedTags;
+  };
 
   const loadPost = async () => {
     try {
@@ -48,15 +69,6 @@ const PostDetail = () => {
       setComments(data);
     } catch (error) {
       console.error('Failed to load comments', error);
-    }
-  };
-
-  const loadTags = async () => {
-    try {
-      const tags = await postService.getAllTags();
-      setAllTags(tags);
-    } catch (error) {
-      console.error('Failed to load tags', error);
     }
   };
 
@@ -99,8 +111,15 @@ const PostDetail = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
+    
+    // Extract tags from description
+    const extractedTags = extractTagsFromDescription(editData.description);
+    
     try {
-      await postService.updatePost(postId, editData);
+      await postService.updatePost(postId, {
+        ...editData,
+        tags: extractedTags,
+      });
       setIsEditing(false);
       loadPost();
       toast.success('Post updated successfully');
@@ -146,13 +165,6 @@ const PostDetail = () => {
     }
   };
 
-  const handleTagToggle = (tagName) => {
-    const newTags = editData.tags.includes(tagName)
-      ? editData.tags.filter((t) => t !== tagName)
-      : [...editData.tags, tagName];
-    setEditData({ ...editData, tags: newTags });
-  };
-
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -195,27 +207,24 @@ const PostDetail = () => {
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   required
+                  placeholder="Write your post content... Use #tagname to mention tags"
                 ></textarea>
+                <small className="text-muted">
+                  Use #tagname to mention tags (e.g., #AI, #React, #JavaScript)
+                </small>
               </div>
-              <div className="mb-3">
-                <label className="form-label fw-bold">Tags</label>
-                <div className="d-flex flex-wrap gap-2">
-                  {allTags.map((tag) => (
-                    <div key={tag.id} className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id={`tag-${tag.id}`}
-                        checked={editData.tags.includes(tag.name)}
-                        onChange={() => handleTagToggle(tag.name)}
-                      />
-                      <label className="form-check-label" htmlFor={`tag-${tag.id}`}>
-                        {tag.name}
-                      </label>
-                    </div>
-                  ))}
+              {detectedTags.length > 0 && (
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Detected Tags:</label>
+                  <div className="d-flex flex-wrap gap-2">
+                    {detectedTags.map((tag, index) => (
+                      <span key={index} className="badge bg-primary">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <button type="submit" className="btn btn-primary me-2">
                 Save Changes
               </button>

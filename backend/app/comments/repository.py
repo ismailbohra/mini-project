@@ -159,10 +159,13 @@ class CommentRepository(CommentRepositoryInterface):
     async def get_pending_comment_reports(
         self, skip: int = 0, limit: int = 100
     ) -> List[CommentReport]:
-        """Get all pending comment reports."""
+        """Get all comment reports (all statuses) with related comment and user data."""
         query = (
             select(CommentReport)
-            .where(CommentReport.status == ReportStatus.PENDING)
+            .options(
+                selectinload(CommentReport.comment).selectinload(Comment.author),
+                selectinload(CommentReport.user),
+            )
             .offset(skip)
             .limit(limit)
             .order_by(CommentReport.created_at.desc())

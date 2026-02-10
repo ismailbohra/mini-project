@@ -15,7 +15,7 @@ router = APIRouter(prefix="/moderator", tags=["moderator"])
 @router.get(
     "/reports/posts",
     response_model=List[PostReportResponse],
-    summary="Get all pending post reports",
+    summary="Get all post reports",
 )
 async def get_pending_post_reports(
     skip: int = Query(0, ge=0),
@@ -23,7 +23,7 @@ async def get_pending_post_reports(
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Get all pending post reports. Moderator only."""
+    """Get all post reports (pending, reviewed, dismissed). Moderator only."""
     return await moderator_service.get_pending_post_reports(skip, limit)
 
 
@@ -45,7 +45,7 @@ async def update_post_report_status(
 @router.get(
     "/reports/comments",
     response_model=List[CommentReportResponse],
-    summary="Get all pending comment reports",
+    summary="Get all comment reports",
 )
 async def get_pending_comment_reports(
     skip: int = Query(0, ge=0),
@@ -53,7 +53,7 @@ async def get_pending_comment_reports(
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Get all pending comment reports. Moderator only."""
+    """Get all comment reports (pending, reviewed, dismissed). Moderator only."""
     return await moderator_service.get_pending_comment_reports(skip, limit)
 
 
@@ -72,7 +72,7 @@ async def update_comment_report_status(
     return await moderator_service.update_comment_report_status(report_id, status_value)
 
 
-# Post Management  
+# Post Management
 @router.get(
     "/posts",
     response_model=List[PostResponse],
@@ -110,11 +110,12 @@ async def update_any_post(
 )
 async def delete_any_post(
     post_id: int,
+    report_id: int = Query(None, description="Optional report ID to mark as reviewed"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Delete any post. Moderator privilege."""
-    await moderator_service.delete_any_post(post_id)
+    """Delete any post. Moderator privilege. If report_id is provided, marks the report as reviewed."""
+    await moderator_service.delete_any_post(post_id, report_id)
 
 
 # Comment Management
@@ -140,8 +141,9 @@ async def update_any_comment(
 )
 async def delete_any_comment(
     comment_id: int,
+    report_id: int = Query(None, description="Optional report ID to mark as reviewed"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Delete any comment. Moderator privilege."""
-    await moderator_service.delete_any_comment(comment_id)
+    """Delete any comment. Moderator privilege. If report_id is provided, marks the report as reviewed."""
+    await moderator_service.delete_any_comment(comment_id, report_id)

@@ -23,11 +23,33 @@ code {
 /* Card hover effects */
 .card {
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  position: relative;
+  z-index: 1;
 }
 
 .card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  z-index: 2;
+}
+
+/* Dropdown menu z-index fix */
+.dropdown {
+  position: relative;
+  z-index: 10;
+}
+
+.dropdown-menu {
+  z-index: 1050 !important;
+}
+
+.dropdown-menu.show {
+  z-index: 1050 !important;
+}
+
+/* Ensure cards with open dropdowns stay on top */
+.card:has(.dropdown-menu.show) {
+  z-index: 100 !important;
 }
 
 /* Smooth scrolling */

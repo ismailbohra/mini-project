@@ -29,7 +29,7 @@ class PostRepository(PostRepositoryInterface):
             .where(Posts.id == post_id, Posts.is_deleted.is_not(True))
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
-                selectinload(Posts.author)
+                selectinload(Posts.author),
             )
         )
         result = await self.session.execute(query)
@@ -44,7 +44,7 @@ class PostRepository(PostRepositoryInterface):
             .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
-                selectinload(Posts.author)
+                selectinload(Posts.author),
             )
             .offset(skip)
             .limit(limit)
@@ -60,7 +60,7 @@ class PostRepository(PostRepositoryInterface):
             .where(Posts.is_deleted.is_not(True))
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
-                selectinload(Posts.author)
+                selectinload(Posts.author),
             )
             .offset(skip)
             .limit(limit)
@@ -172,6 +172,22 @@ class PostRepository(PostRepositoryInterface):
         result = await self.session.execute(query)
         return result.scalar() or 0
 
+    async def get_post_comments_count(self, post_id: int) -> int:
+        """Get count of comments for a post."""
+        from app.comments.model import Comment
+
+        query = (
+            select(func.count())
+            .select_from(Comment)
+            .where(
+                Comment.post_id == post_id,
+                Comment.is_deleted.is_not(True),
+                Comment.parent_comment_id.is_(None),
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar() or 0
+
     async def create_post_report(
         self, user_id: int, post_id: int, reason: str
     ) -> PostReport:
@@ -193,10 +209,10 @@ class PostRepository(PostRepositoryInterface):
     async def get_pending_post_reports(
         self, skip: int = 0, limit: int = 100
     ) -> List[PostReport]:
-        """Get all pending post reports."""
+        """Get all post reports (all statuses) with related post and user data."""
         query = (
             select(PostReport)
-            .where(PostReport.status == ReportStatus.PENDING)
+            .options(selectinload(PostReport.post), selectinload(PostReport.user))
             .offset(skip)
             .limit(limit)
             .order_by(PostReport.created_at.desc())

@@ -9,9 +9,7 @@ class PostRepositoryInterface(ABC):
     """Interface for post repository."""
 
     @abstractmethod
-    async def create_post(
-        self, author_id: int, title: str, description: str
-    ) -> Posts:
+    async def create_post(self, author_id: int, title: str, description: str) -> Posts:
         """Create a new post."""
         pass
 
@@ -88,6 +86,11 @@ class PostRepositoryInterface(ABC):
         pass
 
     @abstractmethod
+    async def get_post_comments_count(self, post_id: int) -> int:
+        """Get count of comments for a post."""
+        pass
+
+    @abstractmethod
     async def create_post_report(
         self, user_id: int, post_id: int, reason: str
     ) -> PostReport:
@@ -95,9 +98,7 @@ class PostRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_post_report(
-        self, user_id: int, post_id: int
-    ) -> Optional[PostReport]:
+    async def get_post_report(self, user_id: int, post_id: int) -> Optional[PostReport]:
         """Get a specific post report by user and post."""
         pass
 
@@ -109,8 +110,6 @@ class PostRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    async def update_report_status(
-        self, report: PostReport, status: str
-    ) -> PostReport:
+    async def update_report_status(self, report: PostReport, status: str) -> PostReport:
         """Update report status."""
         pass

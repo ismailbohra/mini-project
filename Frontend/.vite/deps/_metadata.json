@@ -2,7 +2,72 @@
   "hash": "5fb6660d",
   "configHash": "bd62c279",
   "lockfileHash": "12a0bd11",
-  "browserHash": "2f22b2f3",
-  "optimized": {},
-  "chunks": {}
+  "browserHash": "3fdde5bd",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "3b9bd42e",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "94815d69",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "533b13b3",
+      "needsInterop": false
+    },
+    "react-redux": {
+      "src": "../../node_modules/react-redux/dist/react-redux.mjs",
+      "file": "react-redux.js",
+      "fileHash": "d93c4bfd",
+      "needsInterop": false
+    },
+    "bootstrap/dist/js/bootstrap.bundle.min.js": {
+      "src": "../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
+      "file": "bootstrap_dist_js_bootstrap__bundle__min__js.js",
+      "fileHash": "aeb39b14",
+      "needsInterop": true
+    },
+    "@reduxjs/toolkit": {
+      "src": "../../node_modules/@reduxjs/toolkit/dist/redux-toolkit.modern.mjs",
+      "file": "@reduxjs_toolkit.js",
+      "fileHash": "b0b677c0",
+      "needsInterop": false
+    },
+    "react-toastify": {
+      "src": "../../node_modules/react-toastify/dist/index.mjs",
+      "file": "react-toastify.js",
+      "fileHash": "5b4633ae",
+      "needsInterop": false
+    },
+    "date-fns": {
+      "src": "../../node_modules/date-fns/index.js",
+      "file": "date-fns.js",
+      "fileHash": "d716940a",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "bc5f3172",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-AU2MKR2E": {
+      "file": "chunk-AU2MKR2E.js"
+    },
+    "chunk-VX2H6PUQ": {
+      "file": "chunk-VX2H6PUQ.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
 }

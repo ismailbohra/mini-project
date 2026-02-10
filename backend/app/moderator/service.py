@@ -24,7 +24,7 @@ class ModeratorService:
     async def get_pending_post_reports(
         self, skip: int = 0, limit: int = 100
     ) -> List[PostReportResponse]:
-        """Get all pending post reports."""
+        """Get all post reports with enriched data."""
         reports = await self.post_repository.get_pending_post_reports(skip, limit)
         return [
             PostReportResponse(
@@ -35,6 +35,10 @@ class ModeratorService:
                 status=report.status.value,
                 created_at=report.created_at,
                 reviewed_at=report.reviewed_at,
+                # Enriched fields
+                post_title=report.post.title if report.post else None,
+                post_author_id=report.post.author_id if report.post else None,
+                reporter_username=report.user.username if report.user else None,
             )
             for report in reports
         ]
@@ -44,9 +48,11 @@ class ModeratorService:
     ) -> PostReportResponse:
         """Update post report status."""
         # Get all reports to find by id
-        reports = await self.post_repository.get_pending_post_reports(skip=0, limit=1000)
+        reports = await self.post_repository.get_pending_post_reports(
+            skip=0, limit=1000
+        )
         report = next((r for r in reports if r.id == report_id), None)
-        
+
         if not report:
             raise NotFoundException(f"Report with id {report_id} not found")
 
@@ -59,13 +65,21 @@ class ModeratorService:
             status=updated_report.status.value,
             created_at=updated_report.created_at,
             reviewed_at=updated_report.reviewed_at,
+            # Enriched fields
+            post_title=updated_report.post.title if updated_report.post else None,
+            post_author_id=updated_report.post.author_id
+            if updated_report.post
+            else None,
+            reporter_username=updated_report.user.username
+            if updated_report.user
+            else None,
         )
 
     # Comment Report Management
     async def get_pending_comment_reports(
         self, skip: int = 0, limit: int = 100
     ) -> List[CommentReportResponse]:
-        """Get all pending comment reports."""
+        """Get all comment reports with enriched data."""
         reports = await self.comment_repository.get_pending_comment_reports(skip, limit)
         return [
             CommentReportResponse(
@@ -76,6 +90,16 @@ class ModeratorService:
                 status=report.status.value,
                 created_at=report.created_at,
                 reviewed_at=report.reviewed_at,
+                # Enriched fields
+                comment_title=report.comment.title if report.comment else None,
+                comment_description=report.comment.description
+                if report.comment
+                else None,
+                comment_author_id=report.comment.author_id if report.comment else None,
+                comment_author_username=report.comment.author.username
+                if report.comment and report.comment.author
+                else None,
+                reporter_username=report.user.username if report.user else None,
             )
             for report in reports
         ]
@@ -89,7 +113,7 @@ class ModeratorService:
             skip=0, limit=1000
         )
         report = next((r for r in reports if r.id == report_id), None)
-        
+
         if not report:
             raise NotFoundException(f"Report with id {report_id} not found")
 
@@ -104,6 +128,22 @@ class ModeratorService:
             status=updated_report.status.value,
             created_at=updated_report.created_at,
             reviewed_at=updated_report.reviewed_at,
+            # Enriched fields
+            comment_title=updated_report.comment.title
+            if updated_report.comment
+            else None,
+            comment_description=updated_report.comment.description
+            if updated_report.comment
+            else None,
+            comment_author_id=updated_report.comment.author_id
+            if updated_report.comment
+            else None,
+            comment_author_username=updated_report.comment.author.username
+            if updated_report.comment and updated_report.comment.author
+            else None,
+            reporter_username=updated_report.user.username
+            if updated_report.user
+            else None,
         )
 
     # Post Management
@@ -120,9 +160,7 @@ class ModeratorService:
                 author_id=post.author_id,
                 title=post.title,
                 description=post.description,
-                tags=[
-                    TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in post.tags
-                ],
+                tags=[TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in post.tags],
                 created_at=post.created_at,
                 updated_at=post.updated_at,
             )
@@ -161,17 +199,28 @@ class ModeratorService:
             author_id=updated_post.author_id,
             title=updated_post.title,
             description=updated_post.description,
-            tags=[TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in updated_post.tags],
+            tags=[
+                TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in updated_post.tags
+            ],
             created_at=updated_post.created_at,
             updated_at=updated_post.updated_at,
         )
 
-    async def delete_any_post(self, post_id: int) -> None:
-        """Delete any post (moderator privilege)."""
+    async def delete_any_post(self, post_id: int, report_id: int = None) -> None:
+        """Delete any post (moderator privilege). Optionally marks associated report as reviewed."""
         post = await self.post_repository.get_post_by_id(post_id)
         if not post:
             raise NotFoundException(f"Post with id {post_id} not found")
         await self.post_repository.delete_post(post)
+
+        # If report_id is provided, mark it as deleted
+        if report_id:
+            reports = await self.post_repository.get_pending_post_reports(
+                skip=0, limit=1000
+            )
+            report = next((r for r in reports if r.id == report_id), None)
+            if report:
+                await self.post_repository.update_report_status(report, "Deleted")
 
     # Comment Management
     async def update_any_comment(
@@ -188,12 +237,21 @@ class ModeratorService:
 
         return await self._comment_to_response(comment)
 
-    async def delete_any_comment(self, comment_id: int) -> None:
-        """Delete any comment (moderator privilege)."""
+    async def delete_any_comment(self, comment_id: int, report_id: int = None) -> None:
+        """Delete any comment (moderator privilege). Optionally marks associated report as reviewed."""
         comment = await self.comment_repository.get_comment_by_id(comment_id)
         if not comment:
             raise NotFoundException(f"Comment with id {comment_id} not found")
         await self.comment_repository.delete_comment(comment)
+
+        # If report_id is provided, mark it as deleted
+        if report_id:
+            reports = await self.comment_repository.get_pending_comment_reports(
+                skip=0, limit=1000
+            )
+            report = next((r for r in reports if r.id == report_id), None)
+            if report:
+                await self.comment_repository.update_report_status(report, "Deleted")
 
     async def _comment_to_response(self, comment: Comment) -> CommentResponse:
         """Convert Comment model to CommentResponse."""

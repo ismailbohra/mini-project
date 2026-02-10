@@ -7,15 +7,20 @@ const CreatePost = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [allTags, setAllTags] = useState([]);
+  const [detectedTags, setDetectedTags] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    tags: [],
   });
 
   useEffect(() => {
     loadTags();
   }, []);
+
+  useEffect(() => {
+    const tags = extractTagsFromDescription(formData.description);
+    setDetectedTags(tags);
+  }, [formData.description]);
 
   const loadTags = async () => {
     try {
@@ -33,25 +38,32 @@ const CreatePost = () => {
     });
   };
 
-  const handleTagToggle = (tagName) => {
-    const newTags = formData.tags.includes(tagName)
-      ? formData.tags.filter((t) => t !== tagName)
-      : [...formData.tags, tagName];
-    setFormData({
-      ...formData,
-      tags: newTags,
-    });
-  };
+  const extractTagsFromDescription = (description) => {
+    const tagPattern = /#(\w+)/g;
+    const matches = description.matchAll(tagPattern);
+    const extractedTags = [];
 
+    for (const match of matches) {
+      const tagName = match[1];
+      if (!extractedTags.includes(tagName)) {
+        extractedTags.push(tagName);
+      }
+    }
+
+    return extractedTags;
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // Extract tags from description
+    const extractedTags = extractTagsFromDescription(formData.description);
 
     try {
       await postService.createPost({
         title: formData.title,
         description: formData.description,
-        tags: formData.tags,
+        tags: extractedTags,
       });
       toast.success('Post created successfully!');
       setTimeout(() => {
@@ -64,10 +76,12 @@ const CreatePost = () => {
     }
   };
 
+  
+
   return (
     <div className="container">
       <ToastContainer position="top-right" autoClose={3000} />
-      
+
       <div className="row justify-content-center">
         <div className="col-lg-8">
           <div className="card shadow-sm">
@@ -107,30 +121,25 @@ const CreatePost = () => {
                     value={formData.description}
                     onChange={handleChange}
                     required
-                    placeholder="Write your post content here..."
+                    placeholder="Write your post content here... Use #tagname to mention tags"
                   ></textarea>
+                  <small className="text-muted">
+                    Use #tagname to mention tags (e.g., #AI, #React, #JavaScript)
+                  </small>
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-bold">Tags</label>
-                  <div className="d-flex flex-wrap gap-2">
-                    {allTags.map((tag) => (
-                      <div key={tag.id} className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id={`tag-${tag.id}`}
-                          checked={formData.tags.includes(tag.name)}
-                          onChange={() => handleTagToggle(tag.name)}
-                        />
-                        <label className="form-check-label" htmlFor={`tag-${tag.id}`}>
-                          {tag.name}
-                        </label>
-                      </div>
-                    ))}
+                {detectedTags.length > 0 && (
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">Detected Tags:</label>
+                    <div className="d-flex flex-wrap gap-2">
+                      {detectedTags.map((tag, index) => (
+                        <span key={index} className="badge bg-primary">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <small className="text-muted">Select relevant tags for your post</small>
-                </div>
+                )}
 
                 <div className="d-flex gap-2">
                   <button

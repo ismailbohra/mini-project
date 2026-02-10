@@ -76,7 +76,8 @@ const PostCard = ({ post, onLike, onUnlike, onDelete, canEdit, canDelete }) => {
           </button>
           <Link to={`/post/${post.id}`} className="btn btn-sm btn-outline-secondary">
             <i className="bi bi-chat me-1"></i>
-            Comments
+            {post.comments_count || 0}
+            -Comments
           </Link>
         </div>
       </div>

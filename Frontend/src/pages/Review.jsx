@@ -6,6 +6,7 @@ import moderatorService from '../services/moderatorService';
 
 const Review = () => {
   const [activeTab, setActiveTab] = useState('posts');
+  const [statusFilter, setStatusFilter] = useState('all'); // all, Pending, Reviewed, Dismissed
   const [postReports, setPostReports] = useState([]);
   const [commentReports, setCommentReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,11 +52,11 @@ const Review = () => {
     }
   };
 
-  const handleDeletePost = async (postId) => {
+  const handleDeletePost = async (postId, reportId) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await moderatorService.deleteAnyPost(postId);
+      await moderatorService.deleteAnyPost(postId, reportId);
       toast.success('Post deleted successfully');
       loadReports();
     } catch (error) {
@@ -63,11 +64,11 @@ const Review = () => {
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async (commentId, reportId) => {
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
 
     try {
-      await moderatorService.deleteAnyComment(commentId);
+      await moderatorService.deleteAnyComment(commentId, reportId);
       toast.success('Comment deleted successfully');
       loadReports();
     } catch (error) {
@@ -81,6 +82,32 @@ const Review = () => {
     } catch {
       return dateString;
     }
+  };
+
+  // Filter reports based on status
+  const filteredPostReports = statusFilter === 'all' 
+    ? postReports 
+    : postReports.filter(r => r.status === statusFilter);
+  
+  const filteredCommentReports = statusFilter === 'all'
+    ? commentReports
+    : commentReports.filter(r => r.status === statusFilter);
+
+  // Count reports by status
+  const postStatusCounts = {
+    all: postReports.length,
+    Pending: postReports.filter(r => r.status === 'Pending').length,
+    Reviewed: postReports.filter(r => r.status === 'Reviewed').length,
+    Dismissed: postReports.filter(r => r.status === 'Dismissed').length,
+    Deleted: postReports.filter(r => r.status === 'Deleted').length,
+  };
+
+  const commentStatusCounts = {
+    all: commentReports.length,
+    Pending: commentReports.filter(r => r.status === 'Pending').length,
+    Reviewed: commentReports.filter(r => r.status === 'Reviewed').length,
+    Dismissed: commentReports.filter(r => r.status === 'Dismissed').length,
+    Deleted: commentReports.filter(r => r.status === 'Deleted').length,
   };
 
   return (
@@ -106,8 +133,8 @@ const Review = () => {
           >
             <i className="bi bi-file-text me-2"></i>
             Post Reports
-            {postReports.length > 0 && (
-              <span className="badge bg-danger ms-2">{postReports.length}</span>
+            {postStatusCounts.all > 0 && (
+              <span className="badge bg-danger ms-2">{postStatusCounts.all}</span>
             )}
           </button>
         </li>
@@ -118,12 +145,56 @@ const Review = () => {
           >
             <i className="bi bi-chat me-2"></i>
             Comment Reports
-            {commentReports.length > 0 && (
-              <span className="badge bg-danger ms-2">{commentReports.length}</span>
+            {commentStatusCounts.all > 0 && (
+              <span className="badge bg-danger ms-2">{commentStatusCounts.all}</span>
             )}
           </button>
         </li>
       </ul>
+
+      {/* Status Filters */}
+      <div className="btn-group mb-4" role="group">
+        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+          onClick={() => setStatusFilter('all')}
+        >
+          All ({activeTab === 'posts' ? postStatusCounts.all : commentStatusCounts.all})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'Pending' ? 'btn-warning' : 'btn-outline-warning'}`}
+          onClick={() => setStatusFilter('Pending')}
+        >
+          Pending ({activeTab === 'posts' ? postStatusCounts.Pending : commentStatusCounts.Pending})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'Reviewed' ? 'btn-success' : 'btn-outline-success'}`}
+          onClick={() => setStatusFilter('Reviewed')}
+        >
+          Reviewed ({activeTab === 'posts' ? postStatusCounts.Reviewed : commentStatusCounts.Reviewed})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'Dismissed' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+          onClick={() => setStatusFilter('Dismissed')}
+        >
+          Dismissed ({activeTab === 'posts' ? postStatusCounts.Dismissed : commentStatusCounts.Dismissed})
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'Deleted' ? 'btn-danger' : 'btn-outline-danger'}`}
+          onClick={() => setStatusFilter('Deleted')}
+        >
+          Deleted ({activeTab === 'posts' ? postStatusCounts.Deleted : commentStatusCounts.Deleted})
+        </button>        <button
+          type="button"
+          className={`btn btn-sm ${statusFilter === 'Deleted' ? 'btn-danger' : 'btn-outline-danger'}`}
+          onClick={() => setStatusFilter('Deleted')}
+        >
+          Deleted ({activeTab === 'posts' ? postStatusCounts.Deleted : commentStatusCounts.Deleted})
+        </button>      </div>
 
       {loading ? (
         <div className="text-center py-5">
@@ -136,29 +207,35 @@ const Review = () => {
           {/* Post Reports */}
           {activeTab === 'posts' && (
             <div>
-              {postReports.length === 0 ? (
+              {filteredPostReports.length === 0 ? (
                 <div className="text-center py-5">
                   <i className="bi bi-check-circle display-1 text-success"></i>
-                  <p className="text-muted mt-3">No pending post reports</p>
+                  <p className="text-muted mt-3">
+                    No {statusFilter !== 'all' ? statusFilter.toLowerCase() : ''} post reports
+                  </p>
                 </div>
               ) : (
-                postReports.map((report) => (
+                filteredPostReports.map((report) => (
                   <div key={report.id} className="card shadow-sm mb-3">
                     <div className="card-body">
                       <div className="d-flex justify-content-between align-items-start mb-3">
-                        <div>
+                        <div className="flex-grow-1">
                           <h5 className="card-title mb-1">
                             <Link to={`/post/${report.post_id}`} className="text-decoration-none">
-                              Post #{report.post_id}
+                              {report.post_title || `Post #${report.post_id}`}
                             </Link>
                           </h5>
                           <p className="text-muted small mb-0">
-                            Reported {formatDate(report.created_at)} by User #{report.user_id}
+                            Reported {formatDate(report.created_at)} by {report.reporter_username || `User #${report.user_id}`}
+                            {report.reviewed_at && (
+                              <> • {report.status} {formatDate(report.reviewed_at)}</>
+                            )}
                           </p>
                         </div>
                         <span className={`badge ${
-                          report.status === 'Pending' ? 'bg-warning' :
+                          report.status === 'Pending' ? 'bg-warning text-dark' :
                           report.status === 'Reviewed' ? 'bg-success' :
+                          report.status === 'Deleted' ? 'bg-danger' :
                           'bg-secondary'
                         }`}>
                           {report.status}
@@ -167,7 +244,7 @@ const Review = () => {
 
                       <div className="mb-3">
                         <strong>Reason:</strong>
-                        <p className="mb-0">{report.reason}</p>
+                        <p className="mb-0 mt-1">{report.reason}</p>
                       </div>
 
                       <div className="btn-group" role="group">
@@ -178,27 +255,31 @@ const Review = () => {
                           <i className="bi bi-eye me-1"></i>
                           View Post
                         </Link>
-                        <button
-                          className="btn btn-sm btn-outline-success"
-                          onClick={() => handlePostReportStatus(report.id, 'Reviewed')}
-                        >
-                          <i className="bi bi-check-circle me-1"></i>
-                          Mark Reviewed
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => handlePostReportStatus(report.id, 'Dismissed')}
-                        >
-                          <i className="bi bi-x-circle me-1"></i>
-                          Dismiss
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeletePost(report.post_id)}
-                        >
-                          <i className="bi bi-trash me-1"></i>
-                          Delete Post
-                        </button>
+                        {report.status === 'Pending' && (
+                          <>
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => handlePostReportStatus(report.id, 'Reviewed')}
+                            >
+                              <i className="bi bi-check-circle me-1"></i>
+                              Mark Reviewed
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => handlePostReportStatus(report.id, 'Dismissed')}
+                            >
+                              <i className="bi bi-x-circle me-1"></i>
+                              Dismiss
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeletePost(report.post_id, report.id)}
+                            >
+                              <i className="bi bi-trash me-1"></i>
+                              Delete Post
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -210,58 +291,86 @@ const Review = () => {
           {/* Comment Reports */}
           {activeTab === 'comments' && (
             <div>
-              {commentReports.length === 0 ? (
+              {filteredCommentReports.length === 0 ? (
                 <div className="text-center py-5">
                   <i className="bi bi-check-circle display-1 text-success"></i>
-                  <p className="text-muted mt-3">No pending comment reports</p>
+                  <p className="text-muted mt-3">
+                    No {statusFilter !== 'all' ? statusFilter.toLowerCase() : ''} comment reports
+                  </p>
                 </div>
               ) : (
-                commentReports.map((report) => (
+                filteredCommentReports.map((report) => (
                   <div key={report.id} className="card shadow-sm mb-3">
                     <div className="card-body">
                       <div className="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                          <h5 className="card-title mb-1">Comment #{report.comment_id}</h5>
+                        <div className="flex-grow-1">
+                          <h5 className="card-title mb-1">
+                            Comment #{report.comment_id}
+                            {report.comment_author_username && (
+                              <span className="text-muted fs-6"> by @{report.comment_author_username}</span>
+                            )}
+                          </h5>
                           <p className="text-muted small mb-0">
-                            Reported {formatDate(report.created_at)} by User #{report.user_id}
+                            Reported {formatDate(report.created_at)} by {report.reporter_username || `User #${report.user_id}`}
+                            {report.reviewed_at && (
+                              <> • {report.status} {formatDate(report.reviewed_at)}</>
+                            )}
                           </p>
                         </div>
                         <span className={`badge ${
-                          report.status === 'Pending' ? 'bg-warning' :
+                          report.status === 'Pending' ? 'bg-warning text-dark' :
                           report.status === 'Reviewed' ? 'bg-success' :
+                          report.status === 'Deleted' ? 'bg-danger' :
                           'bg-secondary'
                         }`}>
                           {report.status}
                         </span>
                       </div>
 
+                      {report.comment_title && (
+                        <div className="mb-2">
+                          <strong className="text-primary">{report.comment_title}</strong>
+                        </div>
+                      )}
+
+                      {report.comment_description && (
+                        <div className="mb-3 p-2 bg-light rounded">
+                          <small className="text-muted d-block mb-1">Comment Content:</small>
+                          <p className="mb-0">{report.comment_description}</p>
+                        </div>
+                      )}
+
                       <div className="mb-3">
-                        <strong>Reason:</strong>
-                        <p className="mb-0">{report.reason}</p>
+                        <strong>Report Reason:</strong>
+                        <p className="mb-0 mt-1">{report.reason}</p>
                       </div>
 
                       <div className="btn-group" role="group">
-                        <button
-                          className="btn btn-sm btn-outline-success"
-                          onClick={() => handleCommentReportStatus(report.id, 'Reviewed')}
-                        >
-                          <i className="bi bi-check-circle me-1"></i>
-                          Mark Reviewed
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => handleCommentReportStatus(report.id, 'Dismissed')}
-                        >
-                          <i className="bi bi-x-circle me-1"></i>
-                          Dismiss
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeleteComment(report.comment_id)}
-                        >
-                          <i className="bi bi-trash me-1"></i>
-                          Delete Comment
-                        </button>
+                        {report.status === 'Pending' && (
+                          <>
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => handleCommentReportStatus(report.id, 'Reviewed')}
+                            >
+                              <i className="bi bi-check-circle me-1"></i>
+                              Mark Reviewed
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => handleCommentReportStatus(report.id, 'Dismissed')}
+                            >
+                              <i className="bi bi-x-circle me-1"></i>
+                              Dismiss
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteComment(report.comment_id, report.id)}
+                            >
+                              <i className="bi bi-trash me-1"></i>
+                              Delete Comment
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

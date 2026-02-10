@@ -44,7 +44,9 @@ class CommentService:
             parent_comment_id=comment_data.parent_comment_id,
         )
 
-        return await self._comment_to_response(comment, current_user_id)
+        # Fetch the comment with author loaded
+        comment_with_author = await self.repository.get_comment_by_id(comment.id)
+        return await self._comment_to_response(comment_with_author, current_user_id)
 
     async def get_comment(self, comment_id: int, current_user_id: Optional[int] = None) -> CommentResponse:
         """Get a comment by ID with nested replies."""
@@ -76,7 +78,9 @@ class CommentService:
             comment, title=comment_data.title, description=comment_data.description
         )
 
-        return await self._comment_to_response(comment, current_user_id)
+        # Fetch the updated comment with author loaded
+        updated_comment = await self.repository.get_comment_by_id(comment.id)
+        return await self._comment_to_response(updated_comment, current_user_id)
 
     async def delete_comment(self, comment_id: int, author_id: int) -> None:
         """Delete a comment."""

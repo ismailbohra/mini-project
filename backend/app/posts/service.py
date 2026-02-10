@@ -3,8 +3,14 @@ from typing import List
 
 from app.posts.interface import PostRepositoryInterface
 from app.posts.model import Posts
-from app.posts.schema import PostCreate, PostResponse, PostUpdate, TagResponse
-from app.utils.exceptions import NotFoundException
+from app.posts.schema import (
+    PostCreate,
+    PostLikeResponse,
+    PostResponse,
+    PostUpdate,
+    TagResponse,
+)
+from app.utils.exceptions import ForbiddenException, NotFoundException
 
 
 class PostService:
@@ -67,8 +73,6 @@ class PostService:
 
         # Check if user is the author
         if post.author_id != author_id:
-            from app.utils.exceptions import ForbiddenException
-
             raise ForbiddenException("You can only update your own posts")
 
         # Update post fields
@@ -101,8 +105,6 @@ class PostService:
 
         # Check if user is the author
         if post.author_id != author_id:
-            from app.utils.exceptions import ForbiddenException
-
             raise ForbiddenException("You can only delete your own posts")
 
         await self.repository.delete_post(post)
@@ -121,3 +123,37 @@ class PostService:
             created_at=post.created_at,
             updated_at=post.updated_at,
         )
+
+
+    async def like_post(self, user_id: int, post_id: int) -> PostLikeResponse:
+        """Like a post."""
+        # Check if post exists
+        post = await self.repository.get_post_by_id(post_id)
+        if not post:
+            raise NotFoundException(f"Post with id {post_id} not found")
+
+        # Check if already liked
+        existing_like = await self.repository.get_post_like(user_id, post_id)
+        if existing_like:
+            raise ForbiddenException("You have already liked this post")
+
+        like = await self.repository.add_post_like(user_id, post_id)
+        return PostLikeResponse(
+            id=like.id,
+            user_id=like.user_id,
+            post_id=like.post_id,
+            created_at=like.created_at,
+        )
+
+    async def unlike_post(self, user_id: int, post_id: int) -> None:
+        """Unlike a post."""
+        # Check if like exists
+        existing_like = await self.repository.get_post_like(user_id, post_id)
+        if not existing_like:
+            raise NotFoundException("Like not found")
+
+        await self.repository.remove_post_like(user_id, post_id)
+
+    async def get_post_likes_count(self, post_id: int) -> int:
+        """Get count of likes for a post."""
+        return await self.repository.get_post_likes_count(post_id)

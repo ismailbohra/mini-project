@@ -39,3 +39,12 @@ class PostResponse(BaseModel):
 class PostListResponse(BaseModel):
     posts: List[PostResponse]
     total: int
+
+
+class PostLikeResponse(BaseModel):
+    id: int
+    user_id: int
+    post_id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.posts.model import Posts, Tags
+from app.posts.model import PostLike, Posts, Tags
 
 
 class PostRepositoryInterface(ABC):
@@ -65,4 +65,24 @@ class PostRepositoryInterface(ABC):
     @abstractmethod
     async def get_post_tags(self, post: Posts) -> List[Tags]:
         """Get all tags for a post."""
+        pass
+
+    @abstractmethod
+    async def add_post_like(self, user_id: int, post_id: int) -> PostLike:
+        """Add a like to a post."""
+        pass
+
+    @abstractmethod
+    async def remove_post_like(self, user_id: int, post_id: int) -> None:
+        """Remove a like from a post."""
+        pass
+
+    @abstractmethod
+    async def get_post_like(self, user_id: int, post_id: int) -> Optional[PostLike]:
+        """Get a specific post like."""
+        pass
+
+    @abstractmethod
+    async def get_post_likes_count(self, post_id: int) -> int:
+        """Get count of likes for a post."""
         pass

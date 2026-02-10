@@ -2,8 +2,8 @@
 from typing import List, Optional
 
 from app.posts.interface import PostRepositoryInterface
-from app.posts.model import Posts, PostTag, Tags
-from sqlalchemy import select
+from app.posts.model import PostLike, Posts, PostTag, Tags
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -130,3 +130,35 @@ class PostRepository(PostRepositoryInterface):
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def add_post_like(self, user_id: int, post_id: int) -> PostLike:
+        """Add a like to a post."""
+        post_like = PostLike(user_id=user_id, post_id=post_id)
+        self.session.add(post_like)
+        await self.session.commit()
+        await self.session.refresh(post_like)
+        return post_like
+
+    async def remove_post_like(self, user_id: int, post_id: int) -> None:
+        """Remove a like from a post."""
+        query = delete(PostLike).where(
+            PostLike.user_id == user_id, PostLike.post_id == post_id
+        )
+        await self.session.execute(query)
+        await self.session.commit()
+
+    async def get_post_like(self, user_id: int, post_id: int) -> Optional[PostLike]:
+        """Get a specific post like."""
+        query = select(PostLike).where(
+            PostLike.user_id == user_id, PostLike.post_id == post_id
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_post_likes_count(self, post_id: int) -> int:
+        """Get count of likes for a post."""
+        query = select(func.count()).select_from(PostLike).where(
+            PostLike.post_id == post_id
+        )
+        result = await self.session.execute(query)
+        return result.scalar() or 0

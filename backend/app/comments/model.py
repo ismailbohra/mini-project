@@ -1,8 +1,8 @@
 from datetime import datetime
-from enum import Enum as PyEnum
+from typing import Optional
 
 from app.config.database import Base
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -21,7 +21,7 @@ class Comment(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
-    parent_comment_id: Mapped[int] = mapped_column(
+    parent_comment_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("comments.id"), index=True, nullable=True
     )
 

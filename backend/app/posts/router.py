@@ -3,7 +3,7 @@ from typing import List
 
 from app.auth.dependency import get_current_user_id
 from app.posts.dependency import get_post_service
-from app.posts.schema import PostCreate, PostResponse, PostUpdate
+from app.posts.schema import PostCreate, PostLikeResponse, PostResponse, PostUpdate
 from app.posts.service import PostService
 from fastapi import APIRouter, Depends, Query, status
 
@@ -109,3 +109,46 @@ async def delete_post(
 ):
     """Delete a post. Only the author can delete their own posts."""
     await post_service.delete_post(post_id, user_id)
+
+
+# Post Like endpoints
+@router.post(
+    "/{post_id}/like",
+    response_model=PostLikeResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Like a post",
+)
+async def like_post(
+    post_id: int,
+    user_id: int = Depends(get_current_user_id),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Like a post. User must be authenticated."""
+    return await post_service.like_post(user_id, post_id)
+
+
+@router.delete(
+    "/{post_id}/like",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Unlike a post",
+)
+async def unlike_post(
+    post_id: int,
+    user_id: int = Depends(get_current_user_id),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Remove like from a post. User must be authenticated."""
+    await post_service.unlike_post(user_id, post_id)
+
+
+@router.get(
+    "/{post_id}/likes/count",
+    response_model=int,
+    summary="Get post likes count",
+)
+async def get_post_likes_count(
+    post_id: int,
+    post_service: PostService = Depends(get_post_service),
+):
+    """Get the count of likes for a post."""
+    return await post_service.get_post_likes_count(post_id)

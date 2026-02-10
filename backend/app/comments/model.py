@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Optional
 
 from app.config.database import Base
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from app.posts.model import ReportStatus
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -44,3 +45,24 @@ class CommentLike(Base):
 
     user = relationship("User", back_populates="comment_likes")
     comment = relationship("Comment", back_populates="likes")
+
+
+class CommentReport(Base):
+    __tablename__ = "comment_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("comments.id"), index=True)
+    reason: Mapped[str] = mapped_column(String)
+    status: Mapped[ReportStatus] = mapped_column(
+        Enum(ReportStatus), default=ReportStatus.PENDING
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reviewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user = relationship("User")
+    comment = relationship("Comment")

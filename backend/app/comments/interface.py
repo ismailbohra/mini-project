@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.comments.model import Comment, CommentLike
+from app.comments.model import Comment, CommentLike, CommentReport
 
 
 class CommentRepositoryInterface(ABC):
@@ -72,4 +72,32 @@ class CommentRepositoryInterface(ABC):
         self, user_id: int, comment_id: int
     ) -> Optional[CommentLike]:
         """Get a specific comment like."""
+        pass
+
+    @abstractmethod
+    async def create_comment_report(
+        self, user_id: int, comment_id: int, reason: str
+    ) -> CommentReport:
+        """Create a comment report."""
+        pass
+
+    @abstractmethod
+    async def get_comment_report(
+        self, user_id: int, comment_id: int
+    ) -> Optional[CommentReport]:
+        """Get a specific comment report by user and comment."""
+        pass
+
+    @abstractmethod
+    async def get_pending_comment_reports(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[CommentReport]:
+        """Get all pending comment reports."""
+        pass
+
+    @abstractmethod
+    async def update_report_status(
+        self, report: CommentReport, status: str
+    ) -> CommentReport:
+        """Update report status."""
         pass

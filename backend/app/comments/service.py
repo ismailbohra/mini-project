@@ -6,6 +6,7 @@ from app.comments.model import Comment
 from app.comments.schema import (
     CommentCreate,
     CommentLikeResponse,
+    CommentReportResponse,
     CommentResponse,
     CommentUpdate,
 )
@@ -117,6 +118,33 @@ class CommentService:
             raise NotFoundException("Like not found")
 
         await self.repository.remove_comment_like(user_id, comment_id)
+
+    async def report_comment(
+        self, user_id: int, comment_id: int, reason: str
+    ) -> CommentReportResponse:
+        """Report a comment."""
+        # Check if comment exists
+        comment = await self.repository.get_comment_by_id(comment_id)
+        if not comment:
+            raise NotFoundException(f"Comment with id {comment_id} not found")
+
+        # Check if user already reported this comment
+        existing_report = await self.repository.get_comment_report(user_id, comment_id)
+        if existing_report:
+            raise ForbiddenException("You have already reported this comment")
+
+        report = await self.repository.create_comment_report(
+            user_id, comment_id, reason
+        )
+        return CommentReportResponse(
+            id=report.id,
+            user_id=report.user_id,
+            comment_id=report.comment_id,
+            reason=report.reason,
+            status=report.status.value,
+            created_at=report.created_at,
+            reviewed_at=report.reviewed_at,
+        )
 
     async def _comment_to_response(self, comment: Comment) -> CommentResponse:
         """Convert Comment model to CommentResponse with nested replies."""

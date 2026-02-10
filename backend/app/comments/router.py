@@ -6,6 +6,7 @@ from app.comments.dependency import get_comment_service
 from app.comments.schema import (
     CommentCreate,
     CommentLikeResponse,
+    CommentReportResponse,
     CommentResponse,
     CommentUpdate,
 )
@@ -85,6 +86,23 @@ async def delete_comment(
 ):
     """Delete a comment. Only the author can delete their own comments."""
     await comment_service.delete_comment(comment_id, user_id)
+
+
+# Comment Report endpoint
+@router.post(
+    "/{comment_id}/report",
+    response_model=CommentReportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Report a comment",
+)
+async def report_comment(
+    comment_id: int,
+    reason: str = Query(..., min_length=1, max_length=500),
+    user_id: int = Depends(get_current_user_id),
+    comment_service: CommentService = Depends(get_comment_service),
+):
+    """Report a comment for review. User must be authenticated."""
+    return await comment_service.report_comment(user_id, comment_id, reason)
 
 
 @router.post(

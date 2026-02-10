@@ -39,3 +39,20 @@ class CommentLikeResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CommentReportCreate(BaseModel):
+    comment_id: int
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+class CommentReportResponse(BaseModel):
+    id: int
+    user_id: int
+    comment_id: int
+    reason: str
+    status: str
+    created_at: datetime
+    reviewed_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}

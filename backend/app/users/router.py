@@ -46,11 +46,11 @@ async def get_user(user_id: int, service: UserService = Depends(get_user_service
     return await service.get_user(user_id)
 
 
-@router.put("/{user_id}", response_model=UserResponse)
+@router.put("/", response_model=UserResponse)
 async def update_user(
-    user_id: int,
     user_update: UserUpdate,
     service: UserService = Depends(get_user_service),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Update a user

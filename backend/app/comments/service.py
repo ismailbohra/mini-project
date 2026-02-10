@@ -1,5 +1,5 @@
 # app/comments/service.py
-from typing import List
+from typing import List, Optional
 
 from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment
@@ -20,7 +20,7 @@ class CommentService:
         self.repository = repository
 
     async def create_comment(
-        self, author_id: int, comment_data: CommentCreate
+        self, author_id: int, comment_data: CommentCreate, current_user_id: Optional[int] = None
     ) -> CommentResponse:
         """Create a new comment."""
         # Validate parent comment exists if provided
@@ -44,24 +44,24 @@ class CommentService:
             parent_comment_id=comment_data.parent_comment_id,
         )
 
-        return await self._comment_to_response(comment)
+        return await self._comment_to_response(comment, current_user_id)
 
-    async def get_comment(self, comment_id: int) -> CommentResponse:
+    async def get_comment(self, comment_id: int, current_user_id: Optional[int] = None) -> CommentResponse:
         """Get a comment by ID with nested replies."""
         comment = await self.repository.get_comment_by_id(comment_id)
         if not comment:
             raise NotFoundException(f"Comment with id {comment_id} not found")
-        return await self._comment_to_response(comment)
+        return await self._comment_to_response(comment, current_user_id)
 
     async def get_post_comments(
-        self, post_id: int, skip: int = 0, limit: int = 100
+        self, post_id: int, skip: int = 0, limit: int = 100, current_user_id: Optional[int] = None
     ) -> List[CommentResponse]:
         """Get all top-level comments for a post with nested replies."""
         comments = await self.repository.get_comments_by_post(post_id, skip, limit)
-        return [await self._comment_to_response(comment) for comment in comments]
+        return [await self._comment_to_response(comment, current_user_id) for comment in comments]
 
     async def update_comment(
-        self, comment_id: int, author_id: int, comment_data: CommentUpdate
+        self, comment_id: int, author_id: int, comment_data: CommentUpdate, current_user_id: Optional[int] = None
     ) -> CommentResponse:
         """Update a comment."""
         comment = await self.repository.get_comment_by_id(comment_id)
@@ -76,7 +76,7 @@ class CommentService:
             comment, title=comment_data.title, description=comment_data.description
         )
 
-        return await self._comment_to_response(comment)
+        return await self._comment_to_response(comment, current_user_id)
 
     async def delete_comment(self, comment_id: int, author_id: int) -> None:
         """Delete a comment."""
@@ -146,18 +146,35 @@ class CommentService:
             reviewed_at=report.reviewed_at,
         )
 
-    async def _comment_to_response(self, comment: Comment) -> CommentResponse:
+    async def _comment_to_response(self, comment: Comment, current_user_id: Optional[int] = None) -> CommentResponse:
         """Convert Comment model to CommentResponse with nested replies."""
         # Get likes count
         likes_count = await self.repository.get_comment_likes_count(comment.id)
 
+        # Check if current user has liked this comment
+        user_has_liked = False
+        if current_user_id:
+            like = await self.repository.get_comment_like(current_user_id, comment.id)
+            user_has_liked = like is not None
+
         # Get replies recursively
         replies = await self.repository.get_replies(comment.id)
-        reply_responses = [await self._comment_to_response(reply) for reply in replies]
+        reply_responses = [await self._comment_to_response(reply, current_user_id) for reply in replies]
+
+        # Build author object
+        author = comment.author
+        author_obj = None
+        if author:
+            author_obj = {
+                "id": author.id,
+                "username": author.username,
+                "email": author.email,
+            }
 
         return CommentResponse(
             id=comment.id,
             author_id=comment.author_id,
+            author=author_obj,
             post_id=comment.post_id,
             title=comment.title,
             description=comment.description,
@@ -165,5 +182,6 @@ class CommentService:
             created_at=comment.created_at,
             updated_at=comment.updated_at,
             likes_count=likes_count,
+            user_has_liked=user_has_liked,
             replies=reply_responses,
         )

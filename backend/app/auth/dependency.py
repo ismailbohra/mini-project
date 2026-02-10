@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from app.auth.model import RoleType
 from app.auth.repository import AuthRepository
@@ -11,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
@@ -37,6 +38,28 @@ async def get_current_user_id(
         return int(user_id)
     except ValueError:
         raise UnauthorizedException("Invalid user ID in token")
+
+
+async def get_current_user_id_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+) -> Optional[int]:
+    """Extract user ID from JWT token if provided, otherwise return None."""
+    if not credentials:
+        return None
+
+    token = credentials.credentials
+    payload = decode_token(token)
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+
+    try:
+        return int(user_id)
+    except ValueError:
+        return None
 
 
 async def get_current_user_role(

@@ -5,6 +5,15 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class AuthorResponse(BaseModel):
+    """Basic author information for responses."""
+    id: int
+    username: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+
 class CommentCreate(BaseModel):
     post_id: int
     title: str = Field(..., min_length=1, max_length=200)
@@ -20,6 +29,7 @@ class CommentUpdate(BaseModel):
 class CommentResponse(BaseModel):
     id: int
     author_id: int
+    author: AuthorResponse
     post_id: int
     title: str
     description: str
@@ -27,6 +37,7 @@ class CommentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     likes_count: int = 0
+    user_has_liked: bool = False
     replies: List["CommentResponse"] = []
 
     model_config = {"from_attributes": True}

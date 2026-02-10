@@ -1,7 +1,7 @@
 # app/comments/router.py
-from typing import List
+from typing import List, Optional
 
-from app.auth.dependency import get_current_user_id
+from app.auth.dependency import get_current_user_id, get_current_user_id_optional
 from app.comments.dependency import get_comment_service
 from app.comments.schema import (
     CommentCreate,
@@ -24,9 +24,10 @@ router = APIRouter(prefix="/comments", tags=["comments"])
 async def get_comment(
     comment_id: int,
     comment_service: CommentService = Depends(get_comment_service),
+    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
     """Get a single comment by ID with all nested replies."""
-    return await comment_service.get_comment(comment_id)
+    return await comment_service.get_comment(comment_id, current_user_id)
 
 
 @router.get(
@@ -39,9 +40,10 @@ async def get_post_comments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     comment_service: CommentService = Depends(get_comment_service),
+    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
     """Get all top-level comments for a post with nested replies."""
-    return await comment_service.get_post_comments(post_id, skip, limit)
+    return await comment_service.get_post_comments(post_id, skip, limit, current_user_id)
 
 
 @router.post(
@@ -56,7 +58,7 @@ async def create_comment(
     comment_service: CommentService = Depends(get_comment_service),
 ):
     """Create a new comment or reply."""
-    return await comment_service.create_comment(user_id, comment_data)
+    return await comment_service.create_comment(user_id, comment_data, user_id)
 
 
 @router.put(
@@ -71,7 +73,7 @@ async def update_comment(
     comment_service: CommentService = Depends(get_comment_service),
 ):
     """Update a comment. Only the author can update their own comments."""
-    return await comment_service.update_comment(comment_id, user_id, comment_data)
+    return await comment_service.update_comment(comment_id, user_id, comment_data, user_id)
 
 
 @router.delete(

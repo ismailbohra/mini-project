@@ -14,9 +14,7 @@ class PostRepository(PostRepositoryInterface):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_post(
-        self, author_id: int, title: str, description: str
-    ) -> Posts:
+    async def create_post(self, author_id: int, title: str, description: str) -> Posts:
         """Create a new post."""
         post = Posts(author_id=author_id, title=title, description=description)
         self.session.add(post)
@@ -29,7 +27,10 @@ class PostRepository(PostRepositoryInterface):
         query = (
             select(Posts)
             .where(Posts.id == post_id, Posts.is_deleted.is_not(True))
-            .options(selectinload(Posts.tags).selectinload(PostTag.tag))
+            .options(
+                selectinload(Posts.tags).selectinload(PostTag.tag),
+                selectinload(Posts.author)
+            )
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -41,7 +42,10 @@ class PostRepository(PostRepositoryInterface):
         query = (
             select(Posts)
             .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
-            .options(selectinload(Posts.tags).selectinload(PostTag.tag))
+            .options(
+                selectinload(Posts.tags).selectinload(PostTag.tag),
+                selectinload(Posts.author)
+            )
             .offset(skip)
             .limit(limit)
             .order_by(Posts.created_at.desc())
@@ -54,7 +58,10 @@ class PostRepository(PostRepositoryInterface):
         query = (
             select(Posts)
             .where(Posts.is_deleted.is_not(True))
-            .options(selectinload(Posts.tags).selectinload(PostTag.tag))
+            .options(
+                selectinload(Posts.tags).selectinload(PostTag.tag),
+                selectinload(Posts.author)
+            )
             .offset(skip)
             .limit(limit)
             .order_by(Posts.created_at.desc())
@@ -157,8 +164,10 @@ class PostRepository(PostRepositoryInterface):
 
     async def get_post_likes_count(self, post_id: int) -> int:
         """Get count of likes for a post."""
-        query = select(func.count()).select_from(PostLike).where(
-            PostLike.post_id == post_id
+        query = (
+            select(func.count())
+            .select_from(PostLike)
+            .where(PostLike.post_id == post_id)
         )
         result = await self.session.execute(query)
         return result.scalar() or 0
@@ -173,9 +182,7 @@ class PostRepository(PostRepositoryInterface):
         await self.session.refresh(report)
         return report
 
-    async def get_post_report(
-        self, user_id: int, post_id: int
-    ) -> Optional[PostReport]:
+    async def get_post_report(self, user_id: int, post_id: int) -> Optional[PostReport]:
         """Get a specific post report by user and post."""
         query = select(PostReport).where(
             PostReport.user_id == user_id, PostReport.post_id == post_id
@@ -197,9 +204,7 @@ class PostRepository(PostRepositoryInterface):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def update_report_status(
-        self, report: PostReport, status: str
-    ) -> PostReport:
+    async def update_report_status(self, report: PostReport, status: str) -> PostReport:
         """Update report status."""
         from datetime import datetime
 
@@ -209,3 +214,9 @@ class PostRepository(PostRepositoryInterface):
         await self.session.commit()
         await self.session.refresh(report)
         return report
+
+    async def get_all_tags(self) -> List[Tags]:
+        """Get all tags."""
+        query = select(Tags).order_by(Tags.name)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())

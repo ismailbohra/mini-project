@@ -6,6 +6,7 @@ from app.comments.model import Comment, CommentLike, CommentReport
 from app.posts.model import ReportStatus
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 
 class CommentRepository(CommentRepositoryInterface):
@@ -37,8 +38,10 @@ class CommentRepository(CommentRepositoryInterface):
 
     async def get_comment_by_id(self, comment_id: int) -> Optional[Comment]:
         """Get comment by ID."""
-        query = select(Comment).where(
-            Comment.id == comment_id, Comment.is_deleted.is_not(True)
+        query = (
+            select(Comment)
+            .where(Comment.id == comment_id, Comment.is_deleted.is_not(True))
+            .options(selectinload(Comment.author))
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -54,6 +57,7 @@ class CommentRepository(CommentRepositoryInterface):
                 Comment.parent_comment_id.is_(None),
                 Comment.is_deleted.is_not(True),
             )
+            .options(selectinload(Comment.author))
             .offset(skip)
             .limit(limit)
             .order_by(Comment.created_at.desc())
@@ -69,6 +73,7 @@ class CommentRepository(CommentRepositoryInterface):
                 Comment.parent_comment_id == parent_comment_id,
                 Comment.is_deleted.is_not(True),
             )
+            .options(selectinload(Comment.author))
             .order_by(Comment.created_at.asc())
         )
         result = await self.session.execute(query)

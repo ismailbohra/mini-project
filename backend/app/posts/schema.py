@@ -5,6 +5,15 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class AuthorResponse(BaseModel):
+    """Basic author information for responses."""
+    id: int
+    username: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+
 class TagResponse(BaseModel):
     id: int
     name: str
@@ -27,11 +36,14 @@ class PostUpdate(BaseModel):
 class PostResponse(BaseModel):
     id: int
     author_id: int
+    author: AuthorResponse
     title: str
     description: str
     tags: List[TagResponse]
     created_at: datetime
     updated_at: datetime
+    likes_count: int = 0
+    user_has_liked: bool = False
 
     model_config = {"from_attributes": True}
 

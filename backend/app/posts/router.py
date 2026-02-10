@@ -1,7 +1,7 @@
 # app/posts/router.py
-from typing import List
+from typing import List, Optional
 
-from app.auth.dependency import get_current_user_id
+from app.auth.dependency import get_current_user_id, get_current_user_id_optional
 from app.posts.dependency import get_post_service
 from app.posts.schema import (
     PostCreate,
@@ -9,11 +9,25 @@ from app.posts.schema import (
     PostReportResponse,
     PostResponse,
     PostUpdate,
+    TagResponse,
 )
 from app.posts.service import PostService
 from fastapi import APIRouter, Depends, Query, status
 
 router = APIRouter(prefix="/posts", tags=["posts"])
+
+
+@router.get(
+    "/tags",
+    response_model=List[TagResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get all tags",
+)
+async def get_all_tags(
+    post_service: PostService = Depends(get_post_service),
+):
+    """Return all tags."""
+    return await post_service.get_all_tags()
 
 
 @router.post(
@@ -28,7 +42,7 @@ async def create_post(
     post_service: PostService = Depends(get_post_service),
 ):
     """Create a new post with tags. User must be authenticated."""
-    return await post_service.create_post(user_id, post_data)
+    return await post_service.create_post(user_id, post_data, user_id)
 
 
 @router.get(
@@ -39,9 +53,10 @@ async def create_post(
 async def get_post(
     post_id: int,
     post_service: PostService = Depends(get_post_service),
+    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
     """Get a single post by ID."""
-    return await post_service.get_post(post_id)
+    return await post_service.get_post(post_id, current_user_id)
 
 
 @router.get(
@@ -53,9 +68,10 @@ async def get_all_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     post_service: PostService = Depends(get_post_service),
+    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
     """Get all posts with pagination."""
-    return await post_service.get_all_posts(skip, limit)
+    return await post_service.get_all_posts(skip, limit, current_user_id)
 
 
 @router.get(
@@ -70,7 +86,7 @@ async def get_my_posts(
     post_service: PostService = Depends(get_post_service),
 ):
     """Get all posts by the authenticated user."""
-    return await post_service.get_user_posts(user_id, skip, limit)
+    return await post_service.get_user_posts(user_id, skip, limit, user_id)
 
 
 @router.get(
@@ -83,9 +99,10 @@ async def get_user_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     post_service: PostService = Depends(get_post_service),
+    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
     """Get all posts by a specific user."""
-    return await post_service.get_user_posts(author_id, skip, limit)
+    return await post_service.get_user_posts(author_id, skip, limit, current_user_id)
 
 
 @router.put(
@@ -100,7 +117,7 @@ async def update_post(
     post_service: PostService = Depends(get_post_service),
 ):
     """Update a post. Only the author can update their own posts."""
-    return await post_service.update_post(post_id, user_id, post_data)
+    return await post_service.update_post(post_id, user_id, post_data, user_id)
 
 
 @router.delete(

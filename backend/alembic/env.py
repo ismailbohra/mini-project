@@ -1,8 +1,12 @@
 from logging.config import fileConfig
 
 from alembic import context
+from app.auth.model import UserRole
+from app.comments.model import Comment, CommentLike
 from app.config.database import Base
 from app.config.settings import settings
+from app.posts.model import PostLike, Posts
+from app.users.model import User
 from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides

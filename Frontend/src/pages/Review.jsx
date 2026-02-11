@@ -131,9 +131,9 @@ const Review = () => {
           >
             <i className="bi bi-file-text me-2"></i>
             Post Reports
-            {postStatusCounts.all > 0 && (
+            {/* {postStatusCounts.all > 0 && (
               <span className="badge bg-danger ms-2">{postStatusCounts.all}</span>
-            )}
+            )} */}
           </button>
         </li>
         <li className="nav-item">
@@ -143,9 +143,9 @@ const Review = () => {
           >
             <i className="bi bi-chat me-2"></i>
             Comment Reports
-            {commentStatusCounts.all > 0 && (
+            {/* {commentStatusCounts.all > 0 && (
               <span className="badge bg-danger ms-2">{commentStatusCounts.all}</span>
-            )}
+            )} */}
           </button>
         </li>
       </ul>

@@ -17,12 +17,34 @@ const Profile = () => {
   });
 
   const [username, setUsername] = useState(user?.username || '');
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const handlePasswordChange = (e) => {
     setPasswordData({
       ...passwordData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -57,18 +79,23 @@ const Profile = () => {
   const handleUsernameSubmit = async (e) => {
     e.preventDefault();
     
-    if (!username.trim()) {
-      toast.error('Username cannot be empty');
+    if (!username.trim() && !profileImage) {
+      toast.error('Please provide username or profile image');
       return;
     }
 
     setLoadingUsername(true);
     try {
-      const updatedUser = await authService.updateUsername(username);
+      const updatedUser = await authService.updateUser(
+        username.trim() !== user?.username ? username : null,
+        profileImage
+      );
       dispatch(setUser(updatedUser));
-      toast.success('Username updated successfully');
+      toast.success('Profile updated successfully');
+      setProfileImage(null);
+      setImagePreview(null);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update username');
+      toast.error(error.response?.data?.detail || 'Failed to update profile');
     } finally {
       setLoadingUsername(false);
     }
@@ -88,6 +115,16 @@ const Profile = () => {
         </div>
         <div className="card-body">
           <div className="row">
+            {user?.profile_image && (
+              <div className="col-12 mb-3 text-center">
+                <img
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_image}`}
+                  alt={user.username}
+                  className="rounded-circle img-thumbnail"
+                  style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                />
+              </div>
+            )}
             <div className="col-md-6 mb-3">
               <label className="fw-bold">Username:</label>
               <p className="mb-0">{user?.username}</p>
@@ -119,7 +156,7 @@ const Profile = () => {
       {/* Update Username Card */}
       <div className="card shadow-sm mb-4">
         <div className="card-header">
-          <h5 className="mb-0">Update Username</h5>
+          <h5 className="mb-0">Update Profile</h5>
         </div>
         <div className="card-body">
           <form onSubmit={handleUsernameSubmit}>
@@ -133,14 +170,48 @@ const Profile = () => {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                required
               />
               <small className="text-muted">Current: {user?.username}</small>
+            </div>
+            <div className="mb-3">
+              <label htmlFor="profileImage" className="form-label">
+                Profile Image
+              </label>
+              <input
+                type="file"
+                className="form-control"
+                id="profileImage"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              {user?.profile_image && !imagePreview && (
+                <div className="mt-2">
+                  <p className="text-muted mb-1">Current profile image:</p>
+                  <img
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_image}`}
+                    alt="Current profile"
+                    className="img-thumbnail"
+                    style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+              {imagePreview && (
+                <div className="mt-2">
+                  <p className="text-muted mb-1">New profile image preview:</p>
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="img-thumbnail"
+                    style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+              <small className="text-muted">Maximum file size: 5MB</small>
             </div>
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loadingUsername || username === user?.username}
+              disabled={loadingUsername || (username === user?.username && !profileImage)}
             >
               {loadingUsername ? (
                 <>
@@ -150,7 +221,7 @@ const Profile = () => {
               ) : (
                 <>
                   <i className="bi bi-check-circle me-2"></i>
-                  Update Username
+                  Update Profile
                 </>
               )}
             </button>

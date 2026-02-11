@@ -22,6 +22,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    profile_image: Mapped[str] = mapped_column(String, nullable=True)
 
     posts = relationship("Posts", back_populates="author")
     comments = relationship("Comment", back_populates="author")

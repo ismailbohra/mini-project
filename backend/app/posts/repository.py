@@ -14,9 +14,20 @@ class PostRepository(PostRepositoryInterface):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_post(self, author_id: int, title: str, description: str) -> Posts:
+    async def create_post(
+        self,
+        author_id: int,
+        title: str,
+        description: str,
+        image_path: str | None = None,
+    ) -> Posts:
         """Create a new post."""
-        post = Posts(author_id=author_id, title=title, description=description)
+        post = Posts(
+            author_id=author_id,
+            title=title,
+            description=description,
+            image_path=image_path,
+        )
         self.session.add(post)
         await self.session.commit()
         await self.session.refresh(post)
@@ -110,12 +121,15 @@ class PostRepository(PostRepositoryInterface):
         post: Posts,
         title: Optional[str] = None,
         description: Optional[str] = None,
+        image_path: Optional[str] = None,
     ) -> Posts:
         """Update post."""
         if title is not None:
             post.title = title
         if description is not None:
             post.description = description
+        if image_path is not None:
+            post.image_path = image_path
 
         await self.session.commit()
         await self.session.refresh(post)

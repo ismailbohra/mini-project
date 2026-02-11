@@ -26,6 +26,7 @@ class PostService:
         author_id: int,
         post_data: PostCreate,
         current_user_id: Optional[int] = None,
+        image_path: Optional[str] = None,
     ) -> PostResponse:
         """Create a new post with tags."""
         # Create the post
@@ -33,6 +34,7 @@ class PostService:
             author_id=author_id,
             title=post_data.title,
             description=post_data.description,
+            image_path=image_path,
         )
 
         # Handle tags (get or create, case-insensitive)
@@ -91,6 +93,7 @@ class PostService:
         author_id: int,
         post_data: PostUpdate,
         current_user_id: Optional[int] = None,
+        image_path: Optional[str] = None,
     ) -> PostResponse:
         """Update a post."""
         post = await self.repository.get_post_by_id(post_id)
@@ -103,7 +106,10 @@ class PostService:
 
         # Update post fields
         post = await self.repository.update_post(
-            post, title=post_data.title, description=post_data.description
+            post,
+            title=post_data.title,
+            description=post_data.description,
+            image_path=image_path,
         )
 
         # Update tags if provided
@@ -174,6 +180,7 @@ class PostService:
             likes_count=likes_count,
             comments_count=comments_count,
             user_has_liked=user_has_liked,
+            image_path=post.image_path,
         )
 
     async def like_post(self, user_id: int, post_id: int) -> PostLikeResponse:

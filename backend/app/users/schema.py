@@ -25,5 +25,6 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
     role: str
+    profile_image: Optional[str] = None
 
     model_config = {"from_attributes": True}

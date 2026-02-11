@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from app.config.security import get_password_hash
 from app.users.interface import UserRepositoryInterface
@@ -20,7 +20,9 @@ class UserService:
             raise UserNotFoundException(detail=f"User with id {user_id} not found")
         return user
 
-    async def create_user(self, user_create: UserCreate) -> User:
+    async def create_user(
+        self, user_create: UserCreate, profile_image: Optional[str] = None
+    ) -> User:
         existing_user = await self.repository.get_by_email(user_create.email)
         if existing_user:
             raise UserAlreadyExistsException(detail="Email already registered")
@@ -31,10 +33,14 @@ class UserService:
 
         user_data = user_create.model_dump()
         user_data["hashed_password"] = get_password_hash(user_data.pop("password"))
+        if profile_image:
+            user_data["profile_image"] = profile_image
 
         return await self.repository.create(user_data)
 
-    async def update_user(self, user_id: int, user_update: UserUpdate) -> User:
+    async def update_user(
+        self, user_id: int, user_update: UserUpdate, profile_image: Optional[str] = None
+    ) -> User:
         user = await self.get_user(user_id)
 
         update_data = user_update.model_dump(exclude_unset=True)
@@ -55,6 +61,9 @@ class UserService:
             )
             if existing_username:
                 raise UserAlreadyExistsException(detail="Username already taken")
+
+        if profile_image:
+            update_data["profile_image"] = profile_image
 
         return await self.repository.update(user, update_data)
 

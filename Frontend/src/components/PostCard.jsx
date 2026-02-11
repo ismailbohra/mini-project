@@ -48,8 +48,27 @@ const PostCard = ({ post, onLike, onUnlike, onDelete, canEdit, canDelete }) => {
         </div>
 
         <p className="card-text text-muted small mb-2">
+          {post.author?.profile_image && (
+            <img
+              src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.author.profile_image}`}
+              alt={post.author.username}
+              className="rounded-circle me-1"
+              style={{ width: '20px', height: '20px', objectFit: 'cover' }}
+            />
+          )}
           By <strong>{post.author?.username || 'Unknown'}</strong> • {formatDate(post.created_at)}
         </p>
+
+        {post.image_path && (
+          <div className="mb-2">
+            <img
+              src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.image_path}`}
+              alt={post.title}
+              className="img-fluid rounded"
+              style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'cover' }}
+            />
+          </div>
+        )}
 
         <p className="card-text">
           {post.description?.substring(0, 150)}

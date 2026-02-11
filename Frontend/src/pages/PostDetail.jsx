@@ -18,6 +18,8 @@ const PostDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ title: '', description: '', tags: [] });
   const [detectedTags, setDetectedTags] = useState([]);
+  const [postImage, setPostImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     loadPost();
@@ -44,6 +46,26 @@ const PostDetail = () => {
     }
 
     return extractedTags;
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error('Image size must be less than 10MB');
+        return;
+      }
+      setPostImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const loadPost = async () => {
@@ -119,8 +141,11 @@ const PostDetail = () => {
       await postService.updatePost(postId, {
         ...editData,
         tags: extractedTags,
+        image: postImage,
       });
       setIsEditing(false);
+      setPostImage(null);
+      setImagePreview(null);
       loadPost();
       toast.success('Post updated successfully');
     } catch (error) {
@@ -199,6 +224,41 @@ const PostDetail = () => {
                 />
               </div>
               <div className="mb-3">
+                <label htmlFor="editPostImage" className="form-label fw-bold">
+                  Post Image
+                </label>
+                <input
+                  type="file"
+                  className="form-control"
+                  id="editPostImage"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {post.image_path && !imagePreview && (
+                  <div className="mt-2">
+                    <p className="text-muted mb-1">Current image:</p>
+                    <img
+                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.image_path}`}
+                      alt="Current post"
+                      className="img-thumbnail"
+                      style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                    />
+                  </div>
+                )}
+                {imagePreview && (
+                  <div className="mt-2">
+                    <p className="text-muted mb-1">New image preview:</p>
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="img-thumbnail"
+                      style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                    />
+                  </div>
+                )}
+                <small className="text-muted">Maximum file size: 10MB</small>
+              </div>
+              <div className="mb-3">
                 <textarea
                   className="form-control"
                   rows="8"
@@ -267,6 +327,14 @@ const PostDetail = () => {
               </div>
 
               <p className="text-muted mb-3">
+                {post.author?.profile_image && (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.author.profile_image}`}
+                    alt={post.author.username}
+                    className="rounded-circle me-2"
+                    style={{ width: '30px', height: '30px', objectFit: 'cover' }}
+                  />
+                )}
                 By <strong>{post.author?.username || 'Unknown'}</strong> • {formatDate(post.created_at)}
                 {post.updated_at !== post.created_at && ' • (edited)'}
               </p>
@@ -278,6 +346,17 @@ const PostDetail = () => {
                       {tag.name}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {post.image_path && (
+                <div className="mb-3 justify-content-center text-center">
+                  <img
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.image_path}`}
+                    alt={post.title}
+                    className="img-fluid rounded border"
+                    style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
+                  />
                 </div>
               )}
 

@@ -15,6 +15,8 @@ const Register = () => {
     password: '',
     confirmPassword: '',
   });
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -31,6 +33,26 @@ const Register = () => {
     setError('');
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setError('Image size must be less than 5MB');
+        return;
+      }
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -42,7 +64,7 @@ const Register = () => {
     dispatch(loginStart());
 
     try {
-      await authService.register(formData.username, formData.email, formData.password);
+      await authService.register(formData.username, formData.email, formData.password, profileImage);
       // Auto login after registration
       const response = await authService.login(formData.email, formData.password);
       const userData = await authService.getCurrentUser();
@@ -70,6 +92,30 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label htmlFor="profileImage" className="form-label">
+                Profile Image (Optional)
+              </label>
+              <input
+                type="file"
+                className="form-control"
+                id="profileImage"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              {imagePreview && (
+                <div className="mt-2 text-center">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="img-thumbnail"
+                    style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'cover' }}
+                  />
+                </div>
+              )}
+              <small className="text-muted">Maximum file size: 5MB</small>
+            </div>
+
             <div className="mb-3">
               <label htmlFor="username" className="form-label">
                 Username

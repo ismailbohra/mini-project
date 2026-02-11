@@ -8,6 +8,8 @@ const CreatePost = () => {
   const [loading, setLoading] = useState(false);
   const [allTags, setAllTags] = useState([]);
   const [detectedTags, setDetectedTags] = useState([]);
+  const [postImage, setPostImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -38,6 +40,26 @@ const CreatePost = () => {
     });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error('Image size must be less than 10MB');
+        return;
+      }
+      setPostImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const extractTagsFromDescription = (description) => {
     const tagPattern = /#(\w+)/g;
     const matches = description.matchAll(tagPattern);
@@ -64,6 +86,7 @@ const CreatePost = () => {
         title: formData.title,
         description: formData.description,
         tags: extractedTags,
+        image: postImage,
       });
       toast.success('Post created successfully!');
       setTimeout(() => {
@@ -105,6 +128,30 @@ const CreatePost = () => {
                     required
                     placeholder="Enter post title"
                   />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="postImage" className="form-label fw-bold">
+                    Post Image (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="postImage"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="img-thumbnail"
+                        style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                      />
+                    </div>
+                  )}
+                  <small className="text-muted">Maximum file size: 10MB</small>
                 </div>
 
                 <div className="mb-3">

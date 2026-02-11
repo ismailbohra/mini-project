@@ -12,11 +12,18 @@ export const authService = {
   },
 
   // Register
-  register: async (username, email, password) => {
-    const response = await api.post('/users', {
-      username,
-      email,
-      password,
+  register: async (username, email, password, profileImage = null) => {
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('email', email);
+    formData.append('password', password);
+    if (profileImage) {
+      formData.append('profile_image', profileImage);
+    }
+    const response = await api.post('/users', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
     return response.data;
   },
@@ -36,9 +43,32 @@ export const authService = {
     return response.data;
   },
 
-  // Update username
+  // Update username and profile image
+  updateUser: async (username = null, profileImage = null) => {
+    const formData = new FormData();
+    if (username) {
+      formData.append('username', username);
+    }
+    if (profileImage) {
+      formData.append('profile_image', profileImage);
+    }
+    const response = await api.put('/users', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Keep backwards compatibility
   updateUsername: async (username) => {
-    const response = await api.put('/users', { username });
+    const formData = new FormData();
+    formData.append('username', username);
+    const response = await api.put('/users', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };

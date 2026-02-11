@@ -2,7 +2,9 @@ from app.auth.dependency import get_current_user_id
 from app.users.dependency import get_user_service
 from app.users.schema import UserCreate, UserResponse, UserUpdate
 from app.users.service import UserService
-from fastapi import APIRouter, Depends, status
+from app.utils.upload import save_upload_file
+from fastapi import APIRouter, Depends, status, UploadFile, File, Form
+from pydantic import EmailStr
 
 router = APIRouter(prefix="/users", tags=["User"])
 
@@ -30,12 +32,18 @@ async def get_current_user(
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user_create: UserCreate, service: UserService = Depends(get_user_service)
+    username: str = Form(...),
+    email: EmailStr = Form(...),
+    password: str = Form(...),
+    profile_image: UploadFile | None = File(None),
+    service: UserService = Depends(get_user_service),
 ):
-    """
-    Create a new user
-    """
-    return await service.create_user(user_create)
+    """Create a new user (supports optional profile image)."""
+    image_path = None
+    if profile_image:
+        image_path = save_upload_file(profile_image, subdir="users")
+    user_create = UserCreate(username=username, email=email, password=password)
+    return await service.create_user(user_create, profile_image=image_path)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -48,14 +56,23 @@ async def get_user(user_id: int, service: UserService = Depends(get_user_service
 
 @router.put("/", response_model=UserResponse)
 async def update_user(
-    user_update: UserUpdate,
+    username: str | None = Form(None),
+    password: str | None = Form(None),
+    profile_image: UploadFile | None = File(None),
     service: UserService = Depends(get_user_service),
     user_id: int = Depends(get_current_user_id),
 ):
-    """
-    Update a user
-    """
-    return await service.update_user(user_id, user_update)
+    """Update the authenticated user (supports optional profile image)."""
+    image_path = None
+    if profile_image:
+        image_path = save_upload_file(profile_image, subdir="users")
+    update_payload = {}
+    if username is not None:
+        update_payload["username"] = username
+    if password is not None:
+        update_payload["password"] = password
+    user_update = UserUpdate(**update_payload)
+    return await service.update_user(user_id, user_update, profile_image=image_path)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

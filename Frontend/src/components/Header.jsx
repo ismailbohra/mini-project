@@ -268,7 +268,16 @@ const Header = ({ toggleSidebar }) => {
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              <i className="bi bi-person-circle me-1"></i>
+              {user?.profile_image ? (
+                <img
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_image}`}
+                  alt={user.username}
+                  className="rounded-circle me-1"
+                  style={{ width: '24px', height: '24px', objectFit: 'cover' }}
+                />
+              ) : (
+                <i className="bi bi-person-circle me-1"></i>
+              )}
               {user?.username || 'User'}
             </button>
             <ul className="dropdown-menu dropdown-menu-end">

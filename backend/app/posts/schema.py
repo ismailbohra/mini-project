@@ -11,6 +11,7 @@ class AuthorResponse(BaseModel):
     id: int
     username: str
     email: str
+    profile_image: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -46,6 +47,7 @@ class PostResponse(BaseModel):
     likes_count: int = 0
     user_has_liked: bool = False
     comments_count: int = 0
+    image_path: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

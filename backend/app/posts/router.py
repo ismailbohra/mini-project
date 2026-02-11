@@ -1,4 +1,5 @@
 # app/posts/router.py
+import json
 from typing import List, Optional
 
 from app.auth.dependency import get_current_user_id, get_current_user_id_optional
@@ -12,7 +13,8 @@ from app.posts.schema import (
     TagResponse,
 )
 from app.posts.service import PostService
-from fastapi import APIRouter, Depends, Query, status
+from app.utils.upload import save_upload_file
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -54,12 +56,27 @@ async def get_all_tags(
     summary="Create a new post",
 )
 async def create_post(
-    post_data: PostCreate,
+    title: str = Form(...),
+    description: str = Form(...),
+    tags: str = Form("[]"),
+    image: UploadFile | None = File(None),
     user_id: int = Depends(get_current_user_id),
     post_service: PostService = Depends(get_post_service),
 ):
-    """Create a new post with tags. User must be authenticated."""
-    return await post_service.create_post(user_id, post_data, user_id)
+    """Create a new post (supports optional image)."""
+    try:
+        tags_list = json.loads(tags)
+    except Exception:
+        tags_list = []
+
+    image_path = None
+    if image:
+        image_path = save_upload_file(image, subdir="posts")
+
+    post_data = PostCreate(title=title, description=description, tags=tags_list)
+    return await post_service.create_post(
+        user_id, post_data, user_id, image_path=image_path
+    )
 
 
 @router.get(
@@ -141,12 +158,33 @@ async def get_user_posts(
 )
 async def update_post(
     post_id: int,
-    post_data: PostUpdate,
+    title: str | None = Form(None),
+    description: str | None = Form(None),
+    tags: str | None = Form(None),
+    image: UploadFile | None = File(None),
     user_id: int = Depends(get_current_user_id),
     post_service: PostService = Depends(get_post_service),
 ):
-    """Update a post. Only the author can update their own posts."""
-    return await post_service.update_post(post_id, user_id, post_data, user_id)
+    """Update a post (supports optional image)."""
+    update_payload = {}
+    if title is not None:
+        update_payload["title"] = title
+    if description is not None:
+        update_payload["description"] = description
+    if tags is not None:
+        try:
+            update_payload["tags"] = json.loads(tags)
+        except Exception:
+            update_payload["tags"] = None
+
+    image_path = None
+    if image:
+        image_path = save_upload_file(image, subdir="posts")
+
+    post_update = PostUpdate(**update_payload)
+    return await post_service.update_post(
+        post_id, user_id, post_update, user_id, image_path=image_path
+    )
 
 
 @router.delete(

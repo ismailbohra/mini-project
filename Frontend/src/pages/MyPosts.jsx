@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import PostCard from '../components/PostCard';
 import FilterPanel from '../components/FilterPanel';
 import Pagination from '../components/Pagination';
@@ -79,8 +79,6 @@ const MyPosts = () => {
 
   return (
     <div className="container-fluid">
-      <ToastContainer position="top-right" autoClose={3000} />
-      
       <div className="row mb-3">
         <div className="col">
           <div className="d-flex justify-content-between align-items-center">

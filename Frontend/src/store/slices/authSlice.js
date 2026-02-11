@@ -30,6 +30,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
     },
     logout: (state) => {
+      // WebSocket disconnect should be called BEFORE dispatching this action
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;

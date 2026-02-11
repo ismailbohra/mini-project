@@ -4,6 +4,7 @@ import postReducer from './slices/postSlice';
 import commentReducer from './slices/commentSlice';
 import userReducer from './slices/userSlice';
 import reportReducer from './slices/reportSlice';
+import notificationReducer from './slices/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,5 +13,6 @@ export const store = configureStore({
     comments: commentReducer,
     users: userReducer,
     reports: reportReducer,
+    notifications: notificationReducer,
   },
 });

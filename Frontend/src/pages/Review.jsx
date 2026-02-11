@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import moderatorService from '../services/moderatorService';
 
@@ -112,8 +112,6 @@ const Review = () => {
 
   return (
     <div className="container-fluid">
-      <ToastContainer position="top-right" autoClose={3000} />
-      
       <div className="row mb-4">
         <div className="col">
           <h2>

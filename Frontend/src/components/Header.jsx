@@ -3,25 +3,33 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { setFilters, setPagination } from '../store/slices/postSlice';
+import { markAsRead, markAllAsRead, clearNotifications } from '../store/slices/notificationSlice';
 import postService from '../services/postService';
+import notificationService from '../services/notificationService';
 import debounce from '../utils/debounce';
+import { toast } from 'react-toastify';
+import { formatDistanceToNow } from 'date-fns';
+import { wsManager } from '../services/websocketManager';
 
 const Header = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { notifications, unreadCount } = useSelector((state) => state.notifications);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef(null);
 
   const handleLogout = () => {
+    // Disconnect WebSocket BEFORE dispatching actions to avoid Redux errors
+    wsManager.disconnect();
+    dispatch(clearNotifications());
     dispatch(logout());
     navigate('/login');
   };
 
-  // Debounced function to fetch suggestions
   const fetchSuggestions = useRef(
     debounce(async (query) => {
       if (query.length >= 2) {
@@ -40,49 +48,40 @@ const Header = ({ toggleSidebar }) => {
     }, 300)
   ).current;
 
-  // Handle search input change
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
     fetchSuggestions(value);
-    // If search bar is cleared, reset search filter and pagination
     if (value.trim() === '') {
       dispatch(setFilters({ search: '' }));
       dispatch(setPagination({ page: 1 }));
     }
   };
 
-  // Handle search submission
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Update Redux store with search query
       dispatch(setFilters({ search: searchQuery.trim() }));
       dispatch(setPagination({ page: 1 }));
       setShowSuggestions(false);
       
-      // Navigate to home if not already there
       if (location.pathname !== '/') {
         navigate('/');
       }
     }
   };
 
-  // Handle suggestion selection
   const handleSuggestionClick = (suggestion) => {
     setSearchQuery(suggestion.value);
-    // Update Redux store with search query
     dispatch(setFilters({ search: suggestion.value }));
     dispatch(setPagination({ page: 1 }));
     setShowSuggestions(false);
     
-    // Navigate to home if not already there
     if (location.pathname !== '/') {
       navigate('/');
     }
   };
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -96,11 +95,47 @@ const Header = ({ toggleSidebar }) => {
     };
   }, []);
 
-  const notifications = [
-    { id: 1, message: 'New comment on your post' },
-    { id: 2, message: 'Someone liked your post' },
-    { id: 3, message: 'New reply to your comment' },
-  ];
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.is_read) {
+        await notificationService.markAsRead(notification.id);
+        dispatch(markAsRead(notification.id));
+      }
+
+      if (notification.post_id) {
+        navigate(`/post/${notification.post_id}`);
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      dispatch(markAllAsRead());
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const getNotificationMessage = (notification) => {
+    const actorName = notification.actor_username || 'Someone';
+    switch (notification.type) {
+      case 'comment_created':
+        return `${actorName} commented on your post`;
+      case 'comment_replied':
+        return `${actorName} replied to your comment`;
+      case 'post_liked':
+        return `${actorName} liked your post`;
+      case 'comment_liked':
+        return `${actorName} liked your comment`;
+      default:
+        return 'New notification';
+    }
+  };
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
@@ -132,7 +167,6 @@ const Header = ({ toggleSidebar }) => {
             </button>
           </div>
           
-          {/* Search Suggestions Dropdown */}
           {showSuggestions && suggestions.length > 0 && (
             <div 
               className="position-absolute w-100 mt-1 bg-white border rounded shadow-lg" 
@@ -160,7 +194,6 @@ const Header = ({ toggleSidebar }) => {
         </form>
 
         <div className="d-flex align-items-center">
-          {/* Notifications */}
           <div className="dropdown me-3">
             <button
               className="btn btn-outline-light position-relative"
@@ -169,30 +202,65 @@ const Header = ({ toggleSidebar }) => {
               aria-expanded="false"
             >
               <i className="bi bi-bell"></i>
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                {notifications.length}
-              </span>
+              {unreadCount > 0 && (
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
-            <ul className="dropdown-menu dropdown-menu-end" style={{ minWidth: '300px' }}>
-              <li>
-                <h6 className="dropdown-header">Notifications</h6>
+            <ul className="dropdown-menu dropdown-menu-end" style={{ minWidth: '350px', maxHeight: '400px', overflowY: 'auto' }}>
+              <li className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                <h6 className="mb-0">Notifications</h6>
+                {unreadCount > 0 && (
+                  <button 
+                    className="btn btn-sm btn-link text-decoration-none p-0"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all read
+                  </button>
+                )}
               </li>
-              {notifications.map((notif) => (
-                <li key={notif.id}>
-                  <Link className="dropdown-item" to="#">
-                    <small>{notif.message}</small>
-                  </Link>
-                </li>
-              ))}
-              {notifications.length === 0 && (
+              {notifications.length > 0 ? (
+                notifications.slice(0, 10).map((notif) => (
+                  <li key={notif.id}>
+                    <button
+                      className={`dropdown-item ${!notif.is_read ? 'bg-light' : ''}`}
+                      onClick={() => handleNotificationClick(notif)}
+                      style={{ cursor: 'pointer', whiteSpace: 'normal' }}
+                    >
+                      <div className="d-flex align-items-start">
+                        <i className={`bi ${notif.type && notif.type.includes('comment') ? 'bi-chat-dots' : 'bi-heart'} me-2 mt-1`}></i>
+                        <div className="flex-grow-1">
+                          <div className="fw-bold small">{getNotificationMessage(notif)}</div>
+                          <small className="text-muted">
+                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                          </small>
+                        </div>
+                        {!notif.is_read && (
+                          <span className="badge bg-primary rounded-pill ms-2">New</span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                ))
+              ) : (
                 <li>
-                  <span className="dropdown-item text-muted">No notifications</span>
+                  <span className="dropdown-item text-muted text-center">No notifications</span>
+                </li>
+              )}
+              {notifications.length > 0 && (
+                <li className="border-top">
+                  <button
+                    className="dropdown-item text-center text-primary fw-bold"
+                    onClick={() => navigate('/notifications')}
+                  >
+                    View All Notifications
+                  </button>
                 </li>
               )}
             </ul>
           </div>
 
-          {/* Profile Dropdown */}
           <div className="dropdown">
             <button
               className="btn btn-outline-light dropdown-toggle"

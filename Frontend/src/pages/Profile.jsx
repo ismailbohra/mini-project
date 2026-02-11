@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import { setUser } from '../store/slices/authSlice';
 import authService from '../services/authService';
 
@@ -76,8 +76,6 @@ const Profile = () => {
 
   return (
     <div className="container">
-      <ToastContainer position="top-right" autoClose={3000} />
-      
       <h2 className="mb-4">
         <i className="bi bi-person-circle me-2"></i>
         Profile Settings

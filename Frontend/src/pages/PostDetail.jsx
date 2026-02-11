@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import CommentThread from '../components/CommentThread';
 import postService from '../services/postService';
@@ -185,8 +185,6 @@ const PostDetail = () => {
 
   return (
     <div className="container">
-      <ToastContainer position="top-right" autoClose={3000} />
-
       <div className="card shadow-sm mb-4">
         <div className="card-body">
           {isEditing ? (

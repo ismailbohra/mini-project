@@ -19,6 +19,7 @@ import MyPosts from './pages/MyPosts';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
 import Review from './pages/Review';
+import Notifications from './pages/Notifications';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               <Route path="/post/:postId" element={<PostDetail />} />
               <Route path="/create-post" element={<CreatePost />} />
               <Route path="/my-posts" element={<MyPosts />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/profile" element={<Profile />} />
               
               {/* Admin Only */}

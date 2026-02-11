@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import userService from '../services/userService';
 import Pagination from '../components/Pagination';
 
@@ -70,8 +70,6 @@ const Users = () => {
 
   return (
     <div className="container-fluid">
-      <ToastContainer position="top-right" autoClose={3000} />
-      
       <div className="row mb-3">
         <div className="col">
           <h2>

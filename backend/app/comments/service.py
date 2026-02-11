@@ -1,6 +1,7 @@
 # app/comments/service.py
 from typing import List, Optional
 
+import app.core.event_bus as event_bus_module
 from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment
 from app.comments.schema import (
@@ -20,7 +21,10 @@ class CommentService:
         self.repository = repository
 
     async def create_comment(
-        self, author_id: int, comment_data: CommentCreate, current_user_id: Optional[int] = None
+        self,
+        author_id: int,
+        comment_data: CommentCreate,
+        current_user_id: Optional[int] = None,
     ) -> CommentResponse:
         """Create a new comment."""
         # Validate parent comment exists if provided
@@ -46,9 +50,45 @@ class CommentService:
 
         # Fetch the comment with author loaded
         comment_with_author = await self.repository.get_comment_by_id(comment.id)
+
+        # Emit event
+        if comment_data.parent_comment_id:
+            parent = await self.repository.get_comment_by_id(
+                comment_data.parent_comment_id
+            )
+            if event_bus_module.event_bus:
+                await event_bus_module.event_bus.publish(
+                    "comment.replied",
+                    {
+                        "post_id": comment_data.post_id,
+                        "comment_id": comment.id,
+                        "actor_id": author_id,
+                        "parent_author_id": parent.author_id,
+                    },
+                )
+        else:
+            from app.config.database import AsyncSessionLocal
+            from app.posts.repository import PostRepository
+
+            async with AsyncSessionLocal() as session:
+                post_repo = PostRepository(session)
+                post = await post_repo.get_post_by_id(comment_data.post_id)
+                if post and event_bus_module.event_bus:
+                    await event_bus_module.event_bus.publish(
+                        "comment.created",
+                        {
+                            "post_id": comment_data.post_id,
+                            "comment_id": comment.id,
+                            "actor_id": author_id,
+                            "post_author_id": post.author_id,
+                        },
+                    )
+
         return await self._comment_to_response(comment_with_author, current_user_id)
 
-    async def get_comment(self, comment_id: int, current_user_id: Optional[int] = None) -> CommentResponse:
+    async def get_comment(
+        self, comment_id: int, current_user_id: Optional[int] = None
+    ) -> CommentResponse:
         """Get a comment by ID with nested replies."""
         comment = await self.repository.get_comment_by_id(comment_id)
         if not comment:
@@ -56,14 +96,25 @@ class CommentService:
         return await self._comment_to_response(comment, current_user_id)
 
     async def get_post_comments(
-        self, post_id: int, skip: int = 0, limit: int = 100, current_user_id: Optional[int] = None
+        self,
+        post_id: int,
+        skip: int = 0,
+        limit: int = 100,
+        current_user_id: Optional[int] = None,
     ) -> List[CommentResponse]:
         """Get all top-level comments for a post with nested replies."""
         comments = await self.repository.get_comments_by_post(post_id, skip, limit)
-        return [await self._comment_to_response(comment, current_user_id) for comment in comments]
+        return [
+            await self._comment_to_response(comment, current_user_id)
+            for comment in comments
+        ]
 
     async def update_comment(
-        self, comment_id: int, author_id: int, comment_data: CommentUpdate, current_user_id: Optional[int] = None
+        self,
+        comment_id: int,
+        author_id: int,
+        comment_data: CommentUpdate,
+        current_user_id: Optional[int] = None,
     ) -> CommentResponse:
         """Update a comment."""
         comment = await self.repository.get_comment_by_id(comment_id)
@@ -107,6 +158,25 @@ class CommentService:
             raise ForbiddenException("You have already liked this comment")
 
         like = await self.repository.add_comment_like(user_id, comment_id)
+
+        # Emit event
+        print(
+            f"[DEBUG] Publishing comment.liked event - comment_id: {comment_id}, actor: {user_id}, author: {comment.author_id}"
+        )
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "comment.liked",
+                {
+                    "post_id": comment.post_id,
+                    "comment_id": comment_id,
+                    "actor_id": user_id,
+                    "comment_author_id": comment.author_id,
+                },
+            )
+            print(f"[DEBUG] comment.liked event published successfully")
+        else:
+            print(f"[ERROR] Event bus is None, cannot publish comment.liked event")
+
         return CommentLikeResponse(
             id=like.id,
             user_id=like.user_id,
@@ -150,7 +220,9 @@ class CommentService:
             reviewed_at=report.reviewed_at,
         )
 
-    async def _comment_to_response(self, comment: Comment, current_user_id: Optional[int] = None) -> CommentResponse:
+    async def _comment_to_response(
+        self, comment: Comment, current_user_id: Optional[int] = None
+    ) -> CommentResponse:
         """Convert Comment model to CommentResponse with nested replies."""
         # Get likes count
         likes_count = await self.repository.get_comment_likes_count(comment.id)
@@ -163,7 +235,9 @@ class CommentService:
 
         # Get replies recursively
         replies = await self.repository.get_replies(comment.id)
-        reply_responses = [await self._comment_to_response(reply, current_user_id) for reply in replies]
+        reply_responses = [
+            await self._comment_to_response(reply, current_user_id) for reply in replies
+        ]
 
         # Build author object
         author = comment.author

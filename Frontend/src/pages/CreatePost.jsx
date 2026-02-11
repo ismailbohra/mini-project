@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import postService from '../services/postService';
 
 const CreatePost = () => {
@@ -80,8 +80,6 @@ const CreatePost = () => {
 
   return (
     <div className="container">
-      <ToastContainer position="top-right" autoClose={3000} />
-
       <div className="row justify-content-center">
         <div className="col-lg-8">
           <div className="card shadow-sm">

@@ -1,6 +1,7 @@
 # app/posts/service.py
 from typing import List, Optional
 
+import app.core.event_bus as event_bus_module
 from app.posts.interface import PostRepositoryInterface
 from app.posts.model import Posts
 from app.posts.schema import (
@@ -188,6 +189,24 @@ class PostService:
             raise ForbiddenException("You have already liked this post")
 
         like = await self.repository.add_post_like(user_id, post_id)
+
+        # Emit event
+        print(
+            f"[DEBUG] Publishing post.liked event - post_id: {post_id}, actor: {user_id}, author: {post.author_id}"
+        )
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "post.liked",
+                {
+                    "post_id": post_id,
+                    "actor_id": user_id,
+                    "post_author_id": post.author_id,
+                },
+            )
+            print(f"[DEBUG] post.liked event published successfully")
+        else:
+            print(f"[ERROR] Event bus is None, cannot publish post.liked event")
+
         return PostLikeResponse(
             id=like.id,
             user_id=like.user_id,

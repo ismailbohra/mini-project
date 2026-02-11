@@ -26,10 +26,21 @@ api.interceptors.request.use(
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
+      // Token expired or invalid - clean up and redirect
+      // Import store dynamically to avoid circular dependencies
+      const { store } = await import('../store');
+      const { wsManager } = await import('./websocketManager');
+      const { clearNotifications } = await import('../store/slices/notificationSlice');
+      const { logout } = await import('../store/slices/authSlice');
+      
+      // Disconnect WebSocket and clear state
+      wsManager.disconnect();
+      store.dispatch(clearNotifications());
+      store.dispatch(logout());
+      
+      // Redirect to login
       window.location.href = '/login';
     }
     return Promise.reject(error);

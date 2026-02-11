@@ -26,8 +26,16 @@ class PostRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_all_posts(self, skip: int = 0, limit: int = 100) -> List[Posts]:
-        """Get all posts."""
+    async def get_all_posts(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        search: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> List[Posts]:
+        """Get all posts with search, filter, and sort."""
         pass
 
     @abstractmethod
@@ -112,4 +120,13 @@ class PostRepositoryInterface(ABC):
     @abstractmethod
     async def update_report_status(self, report: PostReport, status: str) -> PostReport:
         """Update report status."""
+        pass
+
+    @abstractmethod
+    async def get_all_tags(self) -> List[Tags]:
+        pass
+
+    @abstractmethod
+    async def search_suggestions(self, search: str, limit: int = 10) -> List[dict]:
+        """Get search suggestions based on partial match."""
         pass

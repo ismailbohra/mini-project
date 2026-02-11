@@ -91,10 +91,7 @@ const FilterPanel = ({ filters, onFilterChange, show, onClose }) => {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="created_at">Created At</option>
-            <option value="updated_at">Updated At</option>
-            <option value="likes_count">Likes Count</option>
-            <option value="comments_count">Comments Count</option>
+            <option value="created_at\">Creation Date</option>
           </select>
         </div>
 

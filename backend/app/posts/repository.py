@@ -53,8 +53,18 @@ class PostRepository(PostRepositoryInterface):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_all_posts(self, skip: int = 0, limit: int = 100) -> List[Posts]:
-        """Get all posts."""
+    async def get_all_posts(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        search: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> List[Posts]:
+        """Get all posts with search, filter, and sort."""
+        from app.users.model import User
+
         query = (
             select(Posts)
             .where(Posts.is_deleted.is_not(True))
@@ -62,10 +72,36 @@ class PostRepository(PostRepositoryInterface):
                 selectinload(Posts.tags).selectinload(PostTag.tag),
                 selectinload(Posts.author),
             )
-            .offset(skip)
-            .limit(limit)
-            .order_by(Posts.created_at.desc())
+            .distinct()
         )
+
+        # Search functionality
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = (
+                query.outerjoin(Posts.author)
+                .outerjoin(Posts.tags)
+                .outerjoin(PostTag.tag)
+            )
+            query = query.where(
+                func.lower(Posts.title).like(search_term)
+                | func.lower(Posts.description).like(search_term)
+                | func.lower(User.username).like(search_term)
+                | func.lower(Tags.name).like(search_term)
+            )
+
+        # Filter by tags
+        if tags and len(tags) > 0:
+            query = query.join(Posts.tags).join(PostTag.tag)
+            query = query.where(Tags.name.in_(tags))
+
+        # Sort
+        if sort_order.lower() == "asc":
+            query = query.order_by(getattr(Posts, sort_by).asc())
+        else:
+            query = query.order_by(getattr(Posts, sort_by).desc())
+
+        query = query.offset(skip).limit(limit)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -236,3 +272,52 @@ class PostRepository(PostRepositoryInterface):
         query = select(Tags).order_by(Tags.name)
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def search_suggestions(self, search: str, limit: int = 10) -> List[dict]:
+        """Get search suggestions based on partial match."""
+        from app.users.model import User
+
+        search_term = f"%{search.lower()}%"
+        suggestions = []
+
+        # Search in post titles
+        title_query = (
+            select(Posts.title)
+            .where(
+                Posts.is_deleted.is_not(True),
+                func.lower(Posts.title).like(search_term),
+            )
+            .distinct()
+            .limit(limit)
+        )
+        title_results = await self.session.execute(title_query)
+        for title in title_results.scalars().all():
+            suggestions.append({"type": "title", "value": title})
+
+        # Search in author names
+        author_query = (
+            select(User.username)
+            .join(Posts, User.id == Posts.author_id)
+            .where(
+                Posts.is_deleted.is_not(True),
+                func.lower(User.username).like(search_term),
+            )
+            .distinct()
+            .limit(limit)
+        )
+        author_results = await self.session.execute(author_query)
+        for username in author_results.scalars().all():
+            suggestions.append({"type": "author", "value": username})
+
+        # Search in tag names
+        tag_query = (
+            select(Tags.name)
+            .where(func.lower(Tags.name).like(search_term))
+            .distinct()
+            .limit(limit)
+        )
+        tag_results = await self.session.execute(tag_query)
+        for tag_name in tag_results.scalars().all():
+            suggestions.append({"type": "tag", "value": tag_name})
+
+        return suggestions[:limit]

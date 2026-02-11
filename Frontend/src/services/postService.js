@@ -1,9 +1,20 @@
 import api from './api';
 
 export const postService = {
-  // Get all posts
+  // Get all posts with search, filter, and sort
   getPosts: async (params = {}) => {
     const response = await api.get('/posts', { params });
+    return response.data;
+  },
+
+  // Get search suggestions
+  getSearchSuggestions: async (search) => {
+    if (!search || search.length < 2) {
+      return [];
+    }
+    const response = await api.get('/posts/search/suggestions', {
+      params: { search },
+    });
     return response.data;
   },
 

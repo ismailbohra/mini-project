@@ -24,8 +24,26 @@ const Home = () => {
       const params = {
         skip: (pagination.page - 1) * pagination.limit,
         limit: pagination.limit,
-        ...filters,
       };
+
+      // Add search parameter if exists
+      if (filters.search) {
+        params.search = filters.search;
+      }
+
+      // Add tags filter if exists
+      if (filters.tags && filters.tags.length > 0) {
+        params.tags = filters.tags;
+      }
+
+      // Add sort parameters
+      if (filters.sortBy) {
+        params.sort_by = filters.sortBy;
+      }
+      if (filters.sortOrder) {
+        params.sort_order = filters.sortOrder;
+      }
+
       const data = await postService.getPosts(params);
       dispatch(setPosts(data));
       // Calculate total pages based on response

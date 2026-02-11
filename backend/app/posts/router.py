@@ -18,6 +18,23 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 @router.get(
+    "/search/suggestions",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+    summary="Get search suggestions",
+)
+async def get_search_suggestions(
+    search: str = Query(
+        ..., min_length=2, description="Search term (minimum 2 characters)"
+    ),
+    limit: int = Query(10, ge=1, le=20),
+    post_service: PostService = Depends(get_post_service),
+):
+    """Get search suggestions based on partial match in titles, authors, and tags."""
+    return await post_service.search_suggestions(search, limit)
+
+
+@router.get(
     "/tags",
     response_model=List[TagResponse],
     status_code=status.HTTP_200_OK,
@@ -67,11 +84,23 @@ async def get_post(
 async def get_all_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    search: Optional[str] = Query(
+        None, description="Search in title, description, author name, and tags"
+    ),
+    tags: Optional[List[str]] = Query(
+        None, alias="tags[]", description="Filter by tag names"
+    ),
+    sort_by: str = Query(
+        "created_at", description="Sort by field (created_at, updated_at)"
+    ),
+    sort_order: str = Query("desc", description="Sort order (asc, desc)"),
     post_service: PostService = Depends(get_post_service),
     current_user_id: Optional[int] = Depends(get_current_user_id_optional),
 ):
-    """Get all posts with pagination."""
-    return await post_service.get_all_posts(skip, limit, current_user_id)
+    """Get all posts with search, filter, and sort capabilities."""
+    return await post_service.get_all_posts(
+        skip, limit, current_user_id, search, tags, sort_by, sort_order
+    )
 
 
 @router.get(

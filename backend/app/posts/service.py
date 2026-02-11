@@ -69,10 +69,19 @@ class PostService:
         return [await self._post_to_response(post, current_user_id) for post in posts]
 
     async def get_all_posts(
-        self, skip: int = 0, limit: int = 100, current_user_id: Optional[int] = None
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        current_user_id: Optional[int] = None,
+        search: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> List[PostResponse]:
-        """Get all posts."""
-        posts = await self.repository.get_all_posts(skip, limit)
+        """Get all posts with search, filter, and sort."""
+        posts = await self.repository.get_all_posts(
+            skip, limit, search, tags, sort_by, sort_order
+        )
         return [await self._post_to_response(post, current_user_id) for post in posts]
 
     async def update_post(
@@ -228,3 +237,9 @@ class PostService:
         """Get all tags."""
         tags = await self.repository.get_all_tags()
         return [TagResponse(id=tag.id, name=tag.name) for tag in tags]
+
+    async def search_suggestions(self, search: str, limit: int = 10) -> List[dict]:
+        """Get search suggestions based on partial match."""
+        if not search or len(search) < 2:
+            return []
+        return await self.repository.search_suggestions(search, limit)

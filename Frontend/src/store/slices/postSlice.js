@@ -11,6 +11,7 @@ const initialState = {
     limit: 10,
   },
   filters: {
+    search: '',
     tags: [],
     sortBy: 'created_at',
     sortOrder: 'desc',

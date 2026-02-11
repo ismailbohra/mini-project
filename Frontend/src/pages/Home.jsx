@@ -44,10 +44,10 @@ const Home = () => {
       }
 
       const data = await postService.getPosts(params);
-      dispatch(setPosts(data));
-      // Calculate total pages based on response
-      const totalPages = Math.ceil((data.length || 0) / pagination.limit);
-      dispatch(setPagination({ total: data.length, totalPages }));
+      dispatch(setPosts(data.posts));
+      // Calculate total pages based on total count from API
+      const totalPages = Math.ceil((data.total || 0) / pagination.limit);
+      dispatch(setPagination({ total: data.total, totalPages }));
     } catch (error) {
       dispatch(setError(error.message));
       toast.error('Failed to load posts');

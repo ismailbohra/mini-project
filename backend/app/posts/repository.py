@@ -48,8 +48,18 @@ class PostRepository(PostRepositoryInterface):
 
     async def get_posts_by_author(
         self, author_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Posts]:
-        """Get all posts by author."""
+    ) -> tuple[List[Posts], int]:
+        """Get all posts by author with total count."""
+        # Get total count
+        count_query = (
+            select(func.count())
+            .select_from(Posts)
+            .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
+        )
+        count_result = await self.session.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Get posts
         query = (
             select(Posts)
             .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
@@ -62,7 +72,9 @@ class PostRepository(PostRepositoryInterface):
             .order_by(Posts.created_at.desc())
         )
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        posts = list(result.scalars().all())
+
+        return posts, total
 
     async def get_all_posts(
         self,
@@ -72,10 +84,18 @@ class PostRepository(PostRepositoryInterface):
         tags: Optional[List[str]] = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
-    ) -> List[Posts]:
-        """Get all posts with search, filter, and sort."""
+    ) -> tuple[List[Posts], int]:
+        """Get all posts with search, filter, and sort, including total count."""
         from app.users.model import User
 
+        # Build base query for counting
+        count_query = (
+            select(func.count(Posts.id.distinct()))
+            .select_from(Posts)
+            .where(Posts.is_deleted.is_not(True))
+        )
+
+        # Build base query for fetching posts
         query = (
             select(Posts)
             .where(Posts.is_deleted.is_not(True))
@@ -89,6 +109,19 @@ class PostRepository(PostRepositoryInterface):
         # Search functionality
         if search:
             search_term = f"%{search.lower()}%"
+            # Apply search to count query
+            count_query = (
+                count_query.outerjoin(Posts.author)
+                .outerjoin(Posts.tags)
+                .outerjoin(PostTag.tag)
+            )
+            count_query = count_query.where(
+                func.lower(Posts.title).like(search_term)
+                | func.lower(Posts.description).like(search_term)
+                | func.lower(User.username).like(search_term)
+                | func.lower(Tags.name).like(search_term)
+            )
+            # Apply search to posts query
             query = (
                 query.outerjoin(Posts.author)
                 .outerjoin(Posts.tags)
@@ -103,8 +136,16 @@ class PostRepository(PostRepositoryInterface):
 
         # Filter by tags
         if tags and len(tags) > 0:
+            # Apply tags filter to count query
+            count_query = count_query.join(Posts.tags).join(PostTag.tag)
+            count_query = count_query.where(Tags.name.in_(tags))
+            # Apply tags filter to posts query
             query = query.join(Posts.tags).join(PostTag.tag)
             query = query.where(Tags.name.in_(tags))
+
+        # Get total count
+        count_result = await self.session.execute(count_query)
+        total = count_result.scalar() or 0
 
         # Sort
         if sort_order.lower() == "asc":
@@ -112,9 +153,12 @@ class PostRepository(PostRepositoryInterface):
         else:
             query = query.order_by(getattr(Posts, sort_by).desc())
 
+        # Apply pagination
         query = query.offset(skip).limit(limit)
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        posts = list(result.scalars().all())
+
+        return posts, total
 
     async def update_post(
         self,

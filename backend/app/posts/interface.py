@@ -21,8 +21,8 @@ class PostRepositoryInterface(ABC):
     @abstractmethod
     async def get_posts_by_author(
         self, author_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Posts]:
-        """Get all posts by author."""
+    ) -> tuple[List[Posts], int]:
+        """Get all posts by author with total count."""
         pass
 
     @abstractmethod
@@ -34,8 +34,8 @@ class PostRepositoryInterface(ABC):
         tags: Optional[List[str]] = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
-    ) -> List[Posts]:
-        """Get all posts with search, filter, and sort."""
+    ) -> tuple[List[Posts], int]:
+        """Get all posts with search, filter, and sort, including total count."""
         pass
 
     @abstractmethod

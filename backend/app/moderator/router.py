@@ -5,7 +5,12 @@ from app.auth.dependency import require_moderator
 from app.comments.schema import CommentReportResponse, CommentResponse, CommentUpdate
 from app.moderator.dependency import get_moderator_service
 from app.moderator.service import ModeratorService
-from app.posts.schema import PostReportResponse, PostResponse, PostUpdate
+from app.posts.schema import (
+    PostListResponse,
+    PostReportResponse,
+    PostResponse,
+    PostUpdate,
+)
 from fastapi import APIRouter, Depends, Query, status
 
 router = APIRouter(prefix="/moderator", tags=["moderator"])
@@ -75,7 +80,7 @@ async def update_comment_report_status(
 # Post Management
 @router.get(
     "/posts",
-    response_model=List[PostResponse],
+    response_model=PostListResponse,
     summary="Get all posts",
 )
 async def get_all_posts(

@@ -19,6 +19,9 @@ from app.utils.exceptions import (
     NotFoundException,
     UnauthorizedException,
 )
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AuthService:
@@ -27,53 +30,68 @@ class AuthService:
 
     async def login(self, request: UserLoginRequest) -> TokenResponse:
         """Login user and return JWT token."""
-        # Get user by username
-        user = await self.repository.get_user_by_email(request.email)
+        try:
+            # Get user by username
+            user = await self.repository.get_user_by_email(request.email)
 
-        if not user:
-            raise UnauthorizedException("Invalid username or password")
+            if not user:
+                raise UnauthorizedException("Invalid username or password")
 
-        # Verify password
-        if not verify_password(request.password, user.hashed_password):
-            raise UnauthorizedException("Invalid username or password")
+            # Verify password
+            if not verify_password(request.password, user.hashed_password):
+                raise UnauthorizedException("Invalid username or password")
 
-        # Check if user is active
-        if not user.is_active:
-            raise UnauthorizedException("User account is inactive")
+            # Check if user is active
+            if not user.is_active:
+                raise UnauthorizedException("User account is inactive")
 
-        # Generate access token
-        token_data = self._create_token_data(user)
-        access_token = create_access_token(
-            data=token_data,
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
-        )
+            # Generate access token
+            token_data = self._create_token_data(user)
+            access_token = create_access_token(
+                data=token_data,
+                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+            )
 
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-            user=self._user_to_response(user),
-        )
+            logger.info(f"User {user.email} logged in successfully")
+            return TokenResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user=self._user_to_response(user),
+            )
+        except UnauthorizedException:
+            logger.warning(f"Failed login attempt for email: {request.email}")
+            raise
+        except Exception as e:
+            logger.exception(f"Unexpected error during login for {request.email}: {e}")
+            raise
 
     async def change_password(
         self, user_id: int, request: ChangePasswordRequest
     ) -> Dict[str, str]:
         """Change user password."""
-        user = await self.repository.get_user_by_id(user_id)
+        try:
+            user = await self.repository.get_user_by_id(user_id)
 
-        if not user:
-            raise NotFoundException("User not found")
+            if not user:
+                raise NotFoundException("User not found")
 
-        # Verify old password
-        if not verify_password(request.old_password, user.hashed_password):
-            raise UnauthorizedException("Invalid old password")
+            # Verify old password
+            if not verify_password(request.old_password, user.hashed_password):
+                raise UnauthorizedException("Invalid old password")
 
-        # Hash new password
-        new_hashed_password = get_password_hash(request.new_password)
+            # Hash new password
+            new_hashed_password = get_password_hash(request.new_password)
 
-        # Update password
-        await self.repository.update_user_password(user, new_hashed_password)
+            # Update password
+            await self.repository.update_user_password(user, new_hashed_password)
 
-        return {"message": "Password changed successfully"}
+            logger.info(f"Password changed successfully for user {user_id}")
+            return {"message": "Password changed successfully"}
+        except (NotFoundException, UnauthorizedException):
+            raise
+        except Exception as e:
+            logger.exception(f"Error changing password for user {user_id}: {e}")
+            raise
 
     async def get_current_user(self, user_id: int) -> UserResponse:
         """Get current user information."""

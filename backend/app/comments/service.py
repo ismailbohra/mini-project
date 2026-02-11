@@ -1,7 +1,7 @@
 # app/comments/service.py
 from typing import List, Optional
 
-import app.core.event_bus as event_bus_module
+import app.utils.event_bus as event_bus_module
 from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment
 from app.comments.schema import (
@@ -12,6 +12,9 @@ from app.comments.schema import (
     CommentUpdate,
 )
 from app.utils.exceptions import ForbiddenException, NotFoundException
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class CommentService:
@@ -160,8 +163,8 @@ class CommentService:
         like = await self.repository.add_comment_like(user_id, comment_id)
 
         # Emit event
-        print(
-            f"[DEBUG] Publishing comment.liked event - comment_id: {comment_id}, actor: {user_id}, author: {comment.author_id}"
+        logger.debug(
+            f"Publishing comment.liked event - comment_id: {comment_id}, actor: {user_id}, author: {comment.author_id}"
         )
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -173,9 +176,9 @@ class CommentService:
                     "comment_author_id": comment.author_id,
                 },
             )
-            print(f"[DEBUG] comment.liked event published successfully")
+            logger.debug("comment.liked event published successfully")
         else:
-            print(f"[ERROR] Event bus is None, cannot publish comment.liked event")
+            logger.error("Event bus is None, cannot publish comment.liked event")
 
         return CommentLikeResponse(
             id=like.id,

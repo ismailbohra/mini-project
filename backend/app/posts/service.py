@@ -1,18 +1,22 @@
 # app/posts/service.py
 from typing import List, Optional
 
-import app.core.event_bus as event_bus_module
+import app.utils.event_bus as event_bus_module
 from app.posts.interface import PostRepositoryInterface
 from app.posts.model import Posts
 from app.posts.schema import (
     PostCreate,
     PostLikeResponse,
+    PostListResponse,
     PostReportResponse,
     PostResponse,
     PostUpdate,
     TagResponse,
 )
 from app.utils.exceptions import ForbiddenException, NotFoundException
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class PostService:
@@ -66,10 +70,13 @@ class PostService:
         skip: int = 0,
         limit: int = 100,
         current_user_id: Optional[int] = None,
-    ) -> List[PostResponse]:
-        """Get all posts by a user."""
-        posts = await self.repository.get_posts_by_author(author_id, skip, limit)
-        return [await self._post_to_response(post, current_user_id) for post in posts]
+    ) -> PostListResponse:
+        """Get all posts by a user with total count."""
+        posts, total = await self.repository.get_posts_by_author(author_id, skip, limit)
+        posts_response = [
+            await self._post_to_response(post, current_user_id) for post in posts
+        ]
+        return PostListResponse(posts=posts_response, total=total)
 
     async def get_all_posts(
         self,
@@ -80,12 +87,15 @@ class PostService:
         tags: Optional[List[str]] = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
-    ) -> List[PostResponse]:
-        """Get all posts with search, filter, and sort."""
-        posts = await self.repository.get_all_posts(
+    ) -> PostListResponse:
+        """Get all posts with search, filter, and sort, including total count."""
+        posts, total = await self.repository.get_all_posts(
             skip, limit, search, tags, sort_by, sort_order
         )
-        return [await self._post_to_response(post, current_user_id) for post in posts]
+        posts_response = [
+            await self._post_to_response(post, current_user_id) for post in posts
+        ]
+        return PostListResponse(posts=posts_response, total=total)
 
     async def update_post(
         self,
@@ -198,8 +208,8 @@ class PostService:
         like = await self.repository.add_post_like(user_id, post_id)
 
         # Emit event
-        print(
-            f"[DEBUG] Publishing post.liked event - post_id: {post_id}, actor: {user_id}, author: {post.author_id}"
+        logger.debug(
+            f"Publishing post.liked event - post_id: {post_id}, actor: {user_id}, author: {post.author_id}"
         )
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -210,9 +220,9 @@ class PostService:
                     "post_author_id": post.author_id,
                 },
             )
-            print(f"[DEBUG] post.liked event published successfully")
+            logger.debug("post.liked event published successfully")
         else:
-            print(f"[ERROR] Event bus is None, cannot publish post.liked event")
+            logger.error("Event bus is None, cannot publish post.liked event")
 
         return PostLikeResponse(
             id=like.id,

@@ -3,6 +3,9 @@ from typing import List
 from app.notifications.interface import NotificationRepositoryInterface
 from app.notifications.model import Notification
 from app.notifications.schema import NotificationResponse
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class NotificationService:

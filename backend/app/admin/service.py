@@ -6,6 +6,9 @@ from app.auth.model import RoleType
 from app.users.model import User
 from app.users.schema import UserResponse
 from app.utils.exceptions import NotFoundException
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AdminService:

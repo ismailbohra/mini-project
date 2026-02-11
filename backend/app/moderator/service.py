@@ -5,8 +5,16 @@ from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment
 from app.comments.schema import CommentReportResponse, CommentResponse, CommentUpdate
 from app.posts.interface import PostRepositoryInterface
-from app.posts.schema import PostReportResponse, PostResponse, PostUpdate
+from app.posts.schema import (
+    PostListResponse,
+    PostReportResponse,
+    PostResponse,
+    PostUpdate,
+)
 from app.utils.exceptions import NotFoundException
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ModeratorService:
@@ -147,14 +155,12 @@ class ModeratorService:
         )
 
     # Post Management
-    async def get_all_posts(
-        self, skip: int = 0, limit: int = 100
-    ) -> List[PostResponse]:
-        """Get all posts."""
+    async def get_all_posts(self, skip: int = 0, limit: int = 100) -> PostListResponse:
+        """Get all posts with total count."""
         from app.posts.schema import TagResponse
 
-        posts = await self.post_repository.get_all_posts(skip, limit)
-        return [
+        posts, total = await self.post_repository.get_all_posts(skip, limit)
+        posts_response = [
             PostResponse(
                 id=post.id,
                 author_id=post.author_id,
@@ -166,6 +172,7 @@ class ModeratorService:
             )
             for post in posts
         ]
+        return PostListResponse(posts=posts_response, total=total)
 
     async def update_any_post(
         self, post_id: int, post_data: PostUpdate

@@ -26,9 +26,9 @@ const MyPosts = () => {
         ...filters,
       };
       const data = await postService.getMyPosts(params);
-      dispatch(setPosts(data));
-      const totalPages = Math.ceil((data.length || 0) / pagination.limit);
-      dispatch(setPagination({ total: data.length, totalPages }));
+      dispatch(setPosts(data.posts));
+      const totalPages = Math.ceil((data.total || 0) / pagination.limit);
+      dispatch(setPagination({ total: data.total, totalPages }));
     } catch (error) {
       dispatch(setError(error.message));
       toast.error('Failed to load posts');
@@ -117,6 +117,13 @@ const MyPosts = () => {
         </div>
       ) : (
         <>
+          <div className='d-flex justify-content-end mb-3'>
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages || 1}
+              onPageChange={handlePageChange}
+            />
+          </div>
           {posts.map((post) => (
             <PostCard
               key={post.id}
@@ -128,7 +135,7 @@ const MyPosts = () => {
               canDelete={true}
             />
           ))}
-          
+
           <Pagination
             currentPage={pagination.page}
             totalPages={pagination.totalPages || 1}

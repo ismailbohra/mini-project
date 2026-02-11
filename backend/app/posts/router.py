@@ -7,6 +7,7 @@ from app.posts.dependency import get_post_service
 from app.posts.schema import (
     PostCreate,
     PostLikeResponse,
+    PostListResponse,
     PostReportResponse,
     PostResponse,
     PostUpdate,
@@ -95,7 +96,7 @@ async def get_post(
 
 @router.get(
     "/",
-    response_model=List[PostResponse],
+    response_model=PostListResponse,
     summary="Get all posts",
 )
 async def get_all_posts(
@@ -122,7 +123,7 @@ async def get_all_posts(
 
 @router.get(
     "/user/me",
-    response_model=List[PostResponse],
+    response_model=PostListResponse,
     summary="Get current user's posts",
 )
 async def get_my_posts(
@@ -137,7 +138,7 @@ async def get_my_posts(
 
 @router.get(
     "/user/{author_id}",
-    response_model=List[PostResponse],
+    response_model=PostListResponse,
     summary="Get posts by user ID",
 )
 async def get_user_posts(

@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 import app.utils.event_bus as event_bus_module
+import app.utils.redis as redis_utils
 from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment
 from app.comments.schema import (
@@ -53,6 +54,9 @@ class CommentService:
 
         # Fetch the comment with author loaded
         comment_with_author = await self.repository.get_comment_by_id(comment.id)
+
+        await redis_utils.delete_cache(f"post:{comment_data.post_id}")
+        await redis_utils.delete_cache(f"comments:post:{comment_data.post_id}")
 
         # Emit event
         if comment_data.parent_comment_id:
@@ -106,11 +110,22 @@ class CommentService:
         current_user_id: Optional[int] = None,
     ) -> List[CommentResponse]:
         """Get all top-level comments for a post with nested replies."""
+        cache_key = f"comments:post:{post_id}"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return [CommentResponse(**item) for item in cached]
+
         comments = await self.repository.get_comments_by_post(post_id, skip, limit)
-        return [
+        response = [
             await self._comment_to_response(comment, current_user_id)
             for comment in comments
         ]
+
+        await redis_utils.set_cache(
+            cache_key, [r.model_dump(mode="json") for r in response]
+        )
+
+        return response
 
     async def update_comment(
         self,
@@ -131,6 +146,8 @@ class CommentService:
         comment = await self.repository.update_comment(
             comment, title=comment_data.title, description=comment_data.description
         )
+
+        await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
 
         # Fetch the updated comment with author loaded
         updated_comment = await self.repository.get_comment_by_id(comment.id)
@@ -161,6 +178,8 @@ class CommentService:
             raise ForbiddenException("You have already liked this comment")
 
         like = await self.repository.add_comment_like(user_id, comment_id)
+
+        await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
 
         # Emit event
         logger.debug(

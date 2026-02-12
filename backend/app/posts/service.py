@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 import app.utils.event_bus as event_bus_module
+import app.utils.redis as redis_utils
 from app.posts.interface import PostRepositoryInterface
 from app.posts.model import Posts
 from app.posts.schema import (
@@ -59,10 +60,20 @@ class PostService:
         self, post_id: int, current_user_id: Optional[int] = None
     ) -> PostResponse:
         """Get a post by ID."""
+        cache_key = f"post:{post_id}"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return PostResponse(**cached)
+
         post = await self.repository.get_post_by_id(post_id)
         if not post:
             raise NotFoundException(f"Post with id {post_id} not found")
-        return await self._post_to_response(post, current_user_id)
+
+        response = await self._post_to_response(post, current_user_id)
+
+        await redis_utils.set_cache(cache_key, response.model_dump(mode="json"))
+
+        return response
 
     async def get_user_posts(
         self,
@@ -137,6 +148,9 @@ class PostService:
 
         # Fetch updated post with tags
         updated_post = await self.repository.get_post_by_id(post_id)
+
+        await redis_utils.delete_cache(f"post:{post_id}")
+
         return await self._post_to_response(updated_post, current_user_id)
 
     async def delete_post(self, post_id: int, author_id: int) -> None:

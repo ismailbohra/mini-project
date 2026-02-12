@@ -1,6 +1,7 @@
 # app/comments/router.py
 from typing import List, Optional
 
+import app.utils.redis as redis_utils
 from app.auth.dependency import get_current_user_id, get_current_user_id_optional
 from app.comments.dependency import get_comment_service
 from app.comments.schema import (
@@ -11,7 +12,7 @@ from app.comments.schema import (
     CommentUpdate,
 )
 from app.comments.service import CommentService
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 
@@ -41,9 +42,22 @@ async def get_post_comments(
     limit: int = Query(100, ge=1, le=100),
     comment_service: CommentService = Depends(get_comment_service),
     current_user_id: Optional[int] = Depends(get_current_user_id_optional),
+    response: Response = None,
 ):
     """Get all top-level comments for a post with nested replies."""
-    return await comment_service.get_post_comments(post_id, skip, limit, current_user_id)
+    cache_key = f"comments:post:{post_id}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return [CommentResponse(**item) for item in cached]
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
+    return await comment_service.get_post_comments(
+        post_id, skip, limit, current_user_id
+    )
 
 
 @router.post(
@@ -73,7 +87,9 @@ async def update_comment(
     comment_service: CommentService = Depends(get_comment_service),
 ):
     """Update a comment. Only the author can update their own comments."""
-    return await comment_service.update_comment(comment_id, user_id, comment_data, user_id)
+    return await comment_service.update_comment(
+        comment_id, user_id, comment_data, user_id
+    )
 
 
 @router.delete(

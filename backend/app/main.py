@@ -30,13 +30,19 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import app.utils.event_bus as event_bus_module
+    import app.utils.redis_cache as redis_cache_module
     from app.utils.event_bus import RedisEventBus
+    from app.utils.redis_cache import RedisCache
 
     logger.info("Starting application...")
 
     event_bus_module.event_bus = RedisEventBus(settings.REDIS_URL)
     await event_bus_module.event_bus.connect()
     logger.info("Redis event bus connected")
+
+    redis_cache_module.redis_cache = RedisCache(settings.REDIS_URL)
+    await redis_cache_module.redis_cache.connect()
+    logger.info("Redis cache client connected")
 
     from app.notifications.subscribers import register_subscribers
 
@@ -49,6 +55,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
     await event_bus_module.event_bus.disconnect()
     logger.info("Redis event bus disconnected")
+    await redis_cache_module.redis_cache.disconnect()
+    logger.info("Redis cache client disconnected")
 
 
 app = FastAPI(

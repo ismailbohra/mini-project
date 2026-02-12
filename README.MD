@@ -7,3 +7,8 @@ alembic upgrade head
 -- FROM public.posts;
 SELECT * FROM public.posts
 ORDER BY id ASC 
+
+
+event bus name = events
+
+Cache hit/miss on header

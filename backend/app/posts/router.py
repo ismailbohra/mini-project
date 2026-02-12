@@ -2,6 +2,7 @@
 import json
 from typing import List, Optional
 
+import app.utils.redis as redis_utils
 from app.auth.dependency import get_current_user_id, get_current_user_id_optional
 from app.posts.dependency import get_post_service
 from app.posts.schema import (
@@ -15,7 +16,7 @@ from app.posts.schema import (
 )
 from app.posts.service import PostService
 from app.utils.upload import save_upload_file
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -89,8 +90,19 @@ async def get_post(
     post_id: int,
     post_service: PostService = Depends(get_post_service),
     current_user_id: Optional[int] = Depends(get_current_user_id_optional),
+    response: Response = None,
 ):
     """Get a single post by ID."""
+    cache_key = f"post:{post_id}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return PostResponse(**cached)
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.get_post(post_id, current_user_id)
 
 

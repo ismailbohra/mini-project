@@ -6,6 +6,10 @@ from app.auth.service import AuthService
 from app.config.database import get_session
 from app.config.security import decode_token
 from app.utils.exceptions import ForbiddenException, UnauthorizedException
+from app.utils.redis import (
+    get_user_role_from_cache,
+    set_user_role_in_cache,
+)
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,17 +68,51 @@ async def get_current_user_id_optional(
 
 async def get_current_user_role(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: AsyncSession = Depends(get_session),
 ) -> str:
-    """Extract user role from JWT token."""
+    """
+    Extract and validate user role with Redis caching.
+
+    Flow:
+    1. Validate token and extract user ID
+    2. Check Redis cache for user role
+    3. If not in cache, fetch from database and update cache
+    4. Return the role for authorization
+    """
     token = credentials.credentials
 
     payload = decode_token(token)
     if not payload:
         raise UnauthorizedException("Invalid or expired token")
 
-    role = payload.get("role")
-    if not role:
-        raise UnauthorizedException("Invalid token payload - missing role")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise UnauthorizedException("Invalid token payload")
+
+    try:
+        user_id_int = int(user_id)
+    except ValueError:
+        raise UnauthorizedException("Invalid user ID in token")
+
+    # Try to get role from Redis cache
+    cached_role = await get_user_role_from_cache(user_id_int)
+    if cached_role:
+        return cached_role
+
+    # If not in cache, fetch from database
+    repository = AuthRepository(session)
+    user = await repository.get_user_by_id(user_id_int)
+
+    if not user:
+        raise UnauthorizedException("User not found")
+
+    if not user.is_active:
+        raise UnauthorizedException("User account is inactive")
+
+    # Store role in Redis cache for future requests
+    role = user.role.value
+    await set_user_role_in_cache(user_id_int, role)
+
     return role
 
 

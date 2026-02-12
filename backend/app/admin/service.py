@@ -7,6 +7,7 @@ from app.users.model import User
 from app.users.schema import UserResponse
 from app.utils.exceptions import NotFoundException
 from app.utils.logging import get_logger
+from app.utils.redis import clear_user_role_cache
 
 logger = get_logger(__name__)
 
@@ -36,6 +37,12 @@ class AdminService:
 
         # Update user role
         user = await self.repository.update_user_role(user, role_type)
+
+        # Clear Redis cache for this user to force role refresh on next request
+        await clear_user_role_cache(request.user_id)
+        logger.info(
+            f"Role updated to {role_type.value} for user {request.user_id} by admin {assigned_by_id}. Redis cache cleared."
+        )
 
         return self._user_to_response(user)
 

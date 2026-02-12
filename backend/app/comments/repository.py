@@ -33,8 +33,14 @@ class CommentRepository(CommentRepositoryInterface):
         )
         self.session.add(comment)
         await self.session.commit()
-        await self.session.refresh(comment)
-        return comment
+        # Re-query to eagerly load relationships (author)
+        query = (
+            select(Comment)
+            .where(Comment.id == comment.id)
+            .options(selectinload(Comment.author))
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()
 
     async def get_comment_by_id(self, comment_id: int) -> Optional[Comment]:
         """Get comment by ID."""
@@ -92,8 +98,14 @@ class CommentRepository(CommentRepositoryInterface):
             comment.description = description
 
         await self.session.commit()
-        await self.session.refresh(comment)
-        return comment
+        # Re-query to return the comment with author relationship loaded
+        query = (
+            select(Comment)
+            .where(Comment.id == comment.id)
+            .options(selectinload(Comment.author))
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()
 
     async def delete_comment(self, comment: Comment) -> None:
         """Soft delete comment."""

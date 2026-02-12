@@ -54,6 +54,15 @@ class PostService:
 
         # Fetch the post with tags to return
         post_with_tags = await self.repository.get_post_by_id(post.id)
+
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "post.new_post_added",
+                {
+                    "post_id": post.id,
+                },
+            )
+
         return await self._post_to_response(post_with_tags, current_user_id)
 
     async def get_post(

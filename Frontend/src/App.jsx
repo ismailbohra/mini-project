@@ -20,6 +20,8 @@ import Profile from './pages/Profile';
 import Users from './pages/Users';
 import Review from './pages/Review';
 import Notifications from './pages/Notifications';
+import Forbidden from './pages/Forbidden';
+
 
 function App() {
   return (
@@ -29,6 +31,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forbidden" element={<Forbidden />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

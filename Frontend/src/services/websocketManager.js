@@ -1,6 +1,6 @@
 import { store } from '../store';
 import { addNotification, setConnected } from '../store/slices/notificationSlice';
-import { updatePostLikesCount, updatePostCommentsCount, updateFullPost, deletePost } from '../store/slices/postSlice';
+import { updatePostLikesCount, updatePostCommentsCount, updateFullPost, deletePost, newPostAdded } from '../store/slices/postSlice';
 import { updateCommentLikesCount, deleteComment, addComment, addReply } from '../store/slices/commentSlice';
 
 class WebSocketManager {
@@ -100,7 +100,10 @@ class WebSocketManager {
               commentsCount: data.post_comments_count,
             }));
           }
-        } else {
+        }else if (data.type === 'new_post_added' && data.data) { 
+          store.dispatch(newPostAdded());
+        }
+        else {
           console.log('[WebSocket] Unknown message type:', data.type);
         }
       } catch (error) {

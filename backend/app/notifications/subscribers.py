@@ -418,6 +418,25 @@ async def on_post_deleted(payload: dict):
         logger.exception(f"Error handling post.deleted event: {e}")
 
 
+async def on_post_added(payload: dict):
+    try:
+        post_id = payload.get("post_id")
+
+        for user_id in ws_manager.active_connections.keys():
+            await ws_manager.send_to_user(
+                user_id,
+                {
+                    "type": "new_post_added",
+                    "data": {
+                        "post_id": post_id,
+                    },
+                },
+            )
+        logger.info(f"New post broadcast for post {post_id}")
+    except Exception as e:
+        logger.exception(f"Error handling post.new_post_added event: {e}")
+
+
 async def on_post_updated(payload: dict):
     try:
         post_id = payload.get("post_id")
@@ -504,6 +523,10 @@ async def register_subscribers():
     await event_bus_module.event_bus.subscribe("post.deleted", on_post_deleted)
     logger.debug("Registered: post.deleted")
     await event_bus_module.event_bus.subscribe("post.updated", on_post_updated)
+
+    logger.debug("Registered: post.Added")
+    await event_bus_module.event_bus.subscribe("post.new_post_added", on_post_added)
+
     logger.debug("Registered: post.updated")
     logger.info(
         f"All subscribers registered. Total handlers: {len(event_bus_module.event_bus.handlers)}"

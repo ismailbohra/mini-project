@@ -52,17 +52,15 @@ class CommentService:
             parent_comment_id=comment_data.parent_comment_id,
         )
 
-        # Fetch the comment with author loaded
-        comment_with_author = await self.repository.get_comment_by_id(comment.id)
+        # The repository now returns the comment with the `author` relationship loaded
+        comment_with_author = comment
 
         await redis_utils.delete_cache(f"post:{comment_data.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment_data.post_id}")
 
         # Emit event
         if comment_data.parent_comment_id:
-            parent = await self.repository.get_comment_by_id(
-                comment_data.parent_comment_id
-            )
+            # `parent` was already fetched earlier during validation; reuse it
             if event_bus_module.event_bus:
                 await event_bus_module.event_bus.publish(
                     "comment.replied",
@@ -167,9 +165,8 @@ class CommentService:
         await redis_utils.delete_cache(f"post:{comment.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
 
-        # Fetch the updated comment with author loaded
-        updated_comment = await self.repository.get_comment_by_id(comment.id)
-        return await self._comment_to_response(updated_comment, current_user_id)
+        # The repository returns the updated comment with `author` loaded
+        return await self._comment_to_response(comment, current_user_id)
 
     async def delete_comment(
         self, comment_id: int, author_id: int, user_role: Optional[str] = None

@@ -27,34 +27,41 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
-      // Don't automatically redirect for authentication endpoints or
-      // when the user is already on the login/register page. That
-      // causes the page to reload and any displayed error to vanish.
+    if (error.response) {
+      const status = error.response.status;
       const requestUrl = error.config?.url || '';
       const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth') || requestUrl.includes('/users');
       const currentPath = window.location.pathname;
-
-      if (isAuthEndpoint || currentPath === '/login' || currentPath === '/register') {
-        // Let the caller handle the error (so forms can show messages)
-        return Promise.reject(error);
+      console.error(`API Error: ${status} on ${requestUrl}`, error.response.data);
+      // Handle 401 Unauthorized
+      if (status === 401) {
+        if (isAuthEndpoint || currentPath === '/login' || currentPath === '/register') {
+          return Promise.reject(error);
+        }
+        const { store } = await import('../store');
+        const { wsManager } = await import('./websocketManager');
+        const { clearNotifications } = await import('../store/slices/notificationSlice');
+        const { logout } = await import('../store/slices/authSlice');
+        
+        wsManager.disconnect();
+        store.dispatch(clearNotifications());
+        store.dispatch(logout());
+        
+        window.location.href = '/login';
       }
+      
+      if (status === 403) {
+        console.log('Received 403 Forbidden response. Redirecting to /forbidden page.');
+        if (currentPath === '/forbidden') {
+          const { store } = await import('../store');
+          store.dispatch(logout());
+          return Promise.reject(error);
+        }
 
-      // Token expired or invalid for other endpoints - clean up and redirect
-      // Import store dynamically to avoid circular dependencies
-      const { store } = await import('../store');
-      const { wsManager } = await import('./websocketManager');
-      const { clearNotifications } = await import('../store/slices/notificationSlice');
-      const { logout } = await import('../store/slices/authSlice');
-      
-      // Disconnect WebSocket and clear state
-      wsManager.disconnect();
-      store.dispatch(clearNotifications());
-      store.dispatch(logout());
-      
-      // Redirect to login
-      window.location.href = '/login';
+        window.location.href = '/forbidden';
+      }
     }
+    
     return Promise.reject(error);
   }
 );

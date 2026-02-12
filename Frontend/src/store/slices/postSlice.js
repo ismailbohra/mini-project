@@ -4,6 +4,7 @@ const initialState = {
   posts: [],
   currentPost: null,
   loading: false,
+  newPostAdded: false,
   error: null,
   pagination: {
     total: 0,
@@ -104,6 +105,9 @@ const postSlice = createSlice({
         state.currentPost = updatedPost;
       }
     },
+    newPostAdded: (state, action) => {
+      state.newPostAdded = true;
+    },
   },
 });
 
@@ -121,6 +125,7 @@ export const {
   updatePostLikesCount,
   updatePostCommentsCount,
   updateFullPost,
+  newPostAdded,
 } = postSlice.actions;
 
 export default postSlice.reducer;

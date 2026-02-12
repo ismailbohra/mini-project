@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
+import { loginStart, loginSuccess, loginFailure, clearError } from '../store/slices/authSlice';
 import authService from '../services/authService';
 
 const Login = () => {
@@ -25,6 +25,8 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear any previous auth errors when user edits the form
+    if (error) dispatch(clearError());
   };
 
   const handleSubmit = async (e) => {
@@ -36,7 +38,9 @@ const Login = () => {
       dispatch(loginSuccess(response));
       navigate('/');
     } catch (err) {
-      dispatch(loginFailure(err.response?.data?.detail || 'Login failed'));
+      const apiMessage = err.response?.data?.error?.message || err.response?.data?.detail || err.response?.data?.message;
+      const message = apiMessage || err.message || 'Login failed';
+      dispatch(loginFailure(message));
     }
   };
 

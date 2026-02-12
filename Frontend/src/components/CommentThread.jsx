@@ -13,12 +13,17 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
 
   const canEdit = () => {
     if (!user) return false;
-    return comment.author_id=== user.id || user.role === 'Admin' || user.role === 'Moderator';
+    return comment.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
   };
 
   const canDelete = () => {
     if (!user) return false;
-    return comment.author_id=== user.id || user.role === 'Admin' || user.role === 'Moderator';
+    return comment.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
+  };
+
+  const canReport = () => {
+    if (!user) return false;
+    return comment.author_id != user.id || user.role === 'Admin' || user.role === 'Moderator';
   };
 
   const handleLike = async () => {
@@ -109,7 +114,7 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
               <strong>{comment.author?.username || 'Unknown'}</strong>
               <small className="text-muted ms-2">{formatDate(comment.created_at)}</small>
             </div>
-            {(canEdit() || canDelete()) && (
+            {(canEdit() || canDelete() || canReport()) && (
               <div className="dropdown">
                 <button
                   className="btn btn-sm btn-link text-muted p-0"
@@ -133,11 +138,15 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
                       </button>
                     </li>
                   )}
-                  <li>
-                    <button className="dropdown-item" onClick={handleReport}>
-                      <i className="bi bi-flag me-2"></i>Report
-                    </button>
-                  </li>
+                  {
+                    canReport() && (
+                      <li>
+                        <button className="dropdown-item" onClick={handleReport}>
+                          <i className="bi bi-flag me-2"></i>Report
+                        </button>
+                      </li>
+                    )
+                  }
                 </ul>
               </div>
             )}

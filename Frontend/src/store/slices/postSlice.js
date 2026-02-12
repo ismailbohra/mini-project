@@ -65,6 +65,45 @@ const postSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updatePostLikesCount: (state, action) => {
+      const { postId, likesCount, userHasLiked } = action.payload;
+      console.log('[PostSlice] Updating post likes:', { postId, likesCount, userHasLiked });
+      const post = state.posts.find(p => p.id === postId);
+      if (post) {
+        post.likes_count = likesCount;
+        post.user_has_liked = userHasLiked;
+        console.log('[PostSlice] Post updated in list:', post);
+      }
+      if (state.currentPost && state.currentPost.id === postId) {
+        state.currentPost.likes_count = likesCount;
+        state.currentPost.user_has_liked = userHasLiked;
+        console.log('[PostSlice] Current post updated:', state.currentPost);
+      }
+    },
+    updatePostCommentsCount: (state, action) => {
+      const { postId, commentsCount } = action.payload;
+      console.log('[PostSlice] Updating post comments count:', { postId, commentsCount });
+      const post = state.posts.find(p => p.id === postId);
+      if (post) {
+        post.comments_count = commentsCount;
+        console.log('[PostSlice] Post comments updated:', post);
+      }
+      if (state.currentPost && state.currentPost.id === postId) {
+        state.currentPost.comments_count = commentsCount;
+        console.log('[PostSlice] Current post comments updated:', state.currentPost);
+      }
+    },
+    updateFullPost: (state, action) => {
+      const updatedPost = action.payload;
+      console.log('[PostSlice] Full post update:', updatedPost);
+      const index = state.posts.findIndex(p => p.id === updatedPost.id);
+      if (index !== -1) {
+        state.posts[index] = updatedPost;
+      }
+      if (state.currentPost && state.currentPost.id === updatedPost.id) {
+        state.currentPost = updatedPost;
+      }
+    },
   },
 });
 
@@ -79,6 +118,9 @@ export const {
   setPagination,
   setFilters,
   clearError,
+  updatePostLikesCount,
+  updatePostCommentsCount,
+  updateFullPost,
 } = postSlice.actions;
 
 export default postSlice.reducer;

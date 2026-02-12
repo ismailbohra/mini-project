@@ -115,14 +115,21 @@ class PostService:
         post_data: PostUpdate,
         current_user_id: Optional[int] = None,
         image_path: Optional[str] = None,
+        user_role: Optional[str] = None,
     ) -> PostResponse:
         """Update a post."""
         post = await self.repository.get_post_by_id(post_id)
         if not post:
             raise NotFoundException(f"Post with id {post_id} not found")
 
-        # Check if user is the author
-        if post.author_id != author_id:
+        # Check if user is the author or has admin/moderator role
+        from app.auth.model import RoleType
+
+        is_admin_or_moderator = user_role in [
+            RoleType.ADMIN.value,
+            RoleType.MODERATOR.value,
+        ]
+        if post.author_id != author_id and not is_admin_or_moderator:
             raise ForbiddenException("You can only update your own posts")
 
         # Update post fields
@@ -151,19 +158,48 @@ class PostService:
 
         await redis_utils.delete_cache(f"post:{post_id}")
 
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "post.updated",
+                {
+                    "post_id": post_id,
+                    "actor_id": author_id,
+                },
+            )
+
         return await self._post_to_response(updated_post, current_user_id)
 
-    async def delete_post(self, post_id: int, author_id: int) -> None:
+    async def delete_post(
+        self, post_id: int, author_id: int, user_role: Optional[str] = None
+    ) -> None:
         """Delete a post."""
         post = await self.repository.get_post_by_id(post_id)
         if not post:
             raise NotFoundException(f"Post with id {post_id} not found")
 
-        # Check if user is the author
-        if post.author_id != author_id:
+        # Check if user is the author or has admin/moderator role
+        from app.auth.model import RoleType
+
+        is_admin_or_moderator = user_role in [
+            RoleType.ADMIN.value,
+            RoleType.MODERATOR.value,
+        ]
+        if post.author_id != author_id and not is_admin_or_moderator:
             raise ForbiddenException("You can only delete your own posts")
 
         await self.repository.delete_post(post)
+
+        await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_cache(f"comments:post:{post_id}")
+
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "post.deleted",
+                {
+                    "post_id": post_id,
+                    "actor_id": author_id,
+                },
+            )
 
     async def _post_to_response(
         self, post: Posts, current_user_id: Optional[int] = None
@@ -221,7 +257,9 @@ class PostService:
 
         like = await self.repository.add_post_like(user_id, post_id)
 
-        # Emit event
+        await redis_utils.delete_cache(f"post:{post_id}")
+
+        # Emit event for notification (only to author)
         logger.debug(
             f"Publishing post.liked event - post_id: {post_id}, actor: {user_id}, author: {post.author_id}"
         )
@@ -232,6 +270,13 @@ class PostService:
                     "post_id": post_id,
                     "actor_id": user_id,
                     "post_author_id": post.author_id,
+                },
+            )
+            await event_bus_module.event_bus.publish(
+                "post.state.updated",
+                {
+                    "post_id": post_id,
+                    "actor_id": user_id,
                 },
             )
             logger.debug("post.liked event published successfully")
@@ -253,6 +298,17 @@ class PostService:
             raise NotFoundException("Like not found")
 
         await self.repository.remove_post_like(user_id, post_id)
+
+        await redis_utils.delete_cache(f"post:{post_id}")
+
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "post.state.updated",
+                {
+                    "post_id": post_id,
+                    "actor_id": user_id,
+                },
+            )
 
     async def get_post_likes_count(self, post_id: int) -> int:
         """Get count of likes for a post."""

@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import CommentThread from '../components/CommentThread';
+import { setCurrentPost, updatePost } from '../store/slices/postSlice';
+import { setComments } from '../store/slices/commentSlice';
 import postService from '../services/postService';
 import commentService from '../services/commentService';
 
 const PostDetail = () => {
   const { postId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [post, setPost] = useState(null);
-  const [comments, setComments] = useState([]);
+  const { currentPost } = useSelector((state) => state.posts);
+  const { comments: reduxComments } = useSelector((state) => state.comments);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -24,7 +27,18 @@ const PostDetail = () => {
   useEffect(() => {
     loadPost();
     loadComments();
+    return () => {
+      dispatch(setCurrentPost(null));
+    };
   }, [postId]);
+
+  // Listen for post deletion and redirect to home
+  useEffect(() => {
+    if (!loading && currentPost === null && postId) {
+      toast.info('This post has been deleted');
+      navigate('/');
+    }
+  }, [currentPost, loading, postId, navigate]);
 
   useEffect(() => {
     if (isEditing) {
@@ -71,7 +85,7 @@ const PostDetail = () => {
   const loadPost = async () => {
     try {
       const data = await postService.getPostById(postId);
-      setPost(data);
+      dispatch(setCurrentPost(data));
       setEditData({
         title: data.title,
         description: data.description,
@@ -88,20 +102,23 @@ const PostDetail = () => {
   const loadComments = async () => {
     try {
       const data = await commentService.getCommentsByPostId(postId);
-      setComments(data);
+      dispatch(setComments(data));
     } catch (error) {
       console.error('Failed to load comments', error);
     }
   };
 
+  const handleCommentDeleted = (commentId) => {
+    loadComments();
+  };
+
   const handleLike = async () => {
     try {
-      if (post.user_has_liked) {
+      if (currentPost.user_has_liked) {
         await postService.unlikePost(postId);
       } else {
         await postService.likePost(postId);
       }
-      loadPost();
     } catch (error) {
       toast.error('Failed to update like');
     }
@@ -165,7 +182,6 @@ const PostDetail = () => {
       });
       setNewComment('');
       loadComments();
-      loadPost(); // Refresh to update comment count
       toast.success('Comment posted!');
     } catch (error) {
       toast.error('Failed to post comment');
@@ -173,13 +189,13 @@ const PostDetail = () => {
   };
 
   const canEdit = () => {
-    if (!user || !post) return false;
-    return post.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
+    if (!user || !currentPost) return false;
+    return currentPost.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
   };
 
   const canDelete = () => {
-    if (!user || !post) return false;
-    return post.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
+    if (!user || !currentPost) return false;
+    return currentPost.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
   };
 
   const formatDate = (dateString) => {
@@ -200,7 +216,7 @@ const PostDetail = () => {
     );
   }
 
-  if (!post) {
+  if (!currentPost) {
     return (
       <div className="text-center py-5">
         <p className="text-muted">Post not found</p>
@@ -234,11 +250,11 @@ const PostDetail = () => {
                   accept="image/*"
                   onChange={handleImageChange}
                 />
-                {post.image_path && !imagePreview && (
+                {currentPost.image_path && !imagePreview && (
                   <div className="mt-2">
                     <p className="text-muted mb-1">Current image:</p>
                     <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.image_path}`}
+                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${currentPost.image_path}`}
                       alt="Current post"
                       className="img-thumbnail"
                       style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
@@ -293,7 +309,7 @@ const PostDetail = () => {
           ) : (
             <>
               <div className="d-flex justify-content-between align-items-start mb-3">
-                <h2>{post.title}</h2>
+                <h2>{currentPost.title}</h2>
                 <div className="dropdown">
                   <button
                     className="btn btn-sm btn-outline-secondary"
@@ -327,21 +343,21 @@ const PostDetail = () => {
               </div>
 
               <p className="text-muted mb-3">
-                {post.author?.profile_image && (
+                {currentPost.author?.profile_image && (
                   <img
-                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.author.profile_image}`}
-                    alt={post.author.username}
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${currentPost.author.profile_image}`}
+                    alt={currentPost.author.username}
                     className="rounded-circle me-2"
                     style={{ width: '30px', height: '30px', objectFit: 'cover' }}
                   />
                 )}
-                By <strong>{post.author?.username || 'Unknown'}</strong> • {formatDate(post.created_at)}
-                {post.updated_at !== post.created_at && ' • (edited)'}
+                By <strong>{currentPost.author?.username || 'Unknown'}</strong> • {formatDate(currentPost.created_at)}
+                {currentPost.updated_at !== currentPost.created_at && ' • (edited)'}
               </p>
 
-              {post.tags && post.tags.length > 0 && (
+              {currentPost.tags && currentPost.tags.length > 0 && (
                 <div className="mb-3">
-                  {post.tags.map((tag) => (
+                  {currentPost.tags.map((tag) => (
                     <span key={tag.id} className="badge bg-secondary me-1">
                       {tag.name}
                     </span>
@@ -349,11 +365,11 @@ const PostDetail = () => {
                 </div>
               )}
 
-              {post.image_path && (
+              {currentPost.image_path && (
                 <div className="mb-3 justify-content-center text-center">
                   <img
-                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${post.image_path}`}
-                    alt={post.title}
+                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${currentPost.image_path}`}
+                    alt={currentPost.title}
                     className="img-fluid rounded border"
                     style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
                   />
@@ -361,17 +377,17 @@ const PostDetail = () => {
               )}
 
               <div className="mb-3" style={{ whiteSpace: 'pre-wrap' }}>
-                {post.description}
+                {currentPost.description}
               </div>
 
               <div className="d-flex gap-3">
                 <button className="btn btn-sm btn-outline-primary" onClick={handleLike}>
-                  <i className={`bi ${post.user_has_liked ? 'bi-heart-fill' : 'bi-heart'} me-1`}></i>
-                  {post.likes_count || 0} Likes
+                  <i className={`bi ${currentPost.user_has_liked ? 'bi-heart-fill' : 'bi-heart'} me-1`}></i>
+                  {currentPost.likes_count || 0} Likes
                 </button>
                 <span className="btn btn-sm btn-outline-secondary">
                   <i className="bi bi-chat me-1"></i>
-                  {post.comments_count || 0} Comments
+                  {currentPost.comments_count || 0} Comments
                 </span>
               </div>
             </>
@@ -402,13 +418,13 @@ const PostDetail = () => {
       {/* Comments Section */}
       <div className="card shadow-sm">
         <div className="card-header">
-          <h5 className="mb-0">Comments ({comments.length})</h5>
+          <h5 className="mb-0">Comments ({reduxComments.length})</h5>
         </div>
         <div className="card-body">
-          {comments.length === 0 ? (
+          {reduxComments.length === 0 ? (
             <p className="text-muted text-center">No comments yet. Be the first to comment!</p>
           ) : (
-            comments.map((comment) => (
+            reduxComments.map((comment) => (
               <CommentThread
                 key={comment.id}
                 comment={comment}

@@ -2,7 +2,11 @@
 from typing import List, Optional
 
 import app.utils.redis as redis_utils
-from app.auth.dependency import get_current_user_id, get_current_user_id_optional
+from app.auth.dependency import (
+    get_current_user_id,
+    get_current_user_id_optional,
+    get_current_user_role,
+)
 from app.comments.dependency import get_comment_service
 from app.comments.schema import (
     CommentCreate,
@@ -84,11 +88,12 @@ async def update_comment(
     comment_id: int,
     comment_data: CommentUpdate,
     user_id: int = Depends(get_current_user_id),
+    user_role: str = Depends(get_current_user_role),
     comment_service: CommentService = Depends(get_comment_service),
 ):
-    """Update a comment. Only the author can update their own comments."""
+    """Update a comment. Owner, Admin, or Moderator can update."""
     return await comment_service.update_comment(
-        comment_id, user_id, comment_data, user_id
+        comment_id, user_id, comment_data, user_id, user_role=user_role
     )
 
 
@@ -100,10 +105,11 @@ async def update_comment(
 async def delete_comment(
     comment_id: int,
     user_id: int = Depends(get_current_user_id),
+    user_role: str = Depends(get_current_user_role),
     comment_service: CommentService = Depends(get_comment_service),
 ):
-    """Delete a comment. Only the author can delete their own comments."""
-    await comment_service.delete_comment(comment_id, user_id)
+    """Delete a comment. Owner, Admin, or Moderator can delete."""
+    await comment_service.delete_comment(comment_id, user_id, user_role=user_role)
 
 
 # Comment Report endpoint

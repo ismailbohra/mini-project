@@ -2,15 +2,9 @@
 from typing import List
 
 from app.comments.interface import CommentRepositoryInterface
-from app.comments.model import Comment
-from app.comments.schema import CommentReportResponse, CommentResponse, CommentUpdate
+from app.comments.schema import CommentReportResponse
 from app.posts.interface import PostRepositoryInterface
-from app.posts.schema import (
-    PostListResponse,
-    PostReportResponse,
-    PostResponse,
-    PostUpdate,
-)
+from app.posts.schema import PostReportResponse
 from app.utils.exceptions import NotFoundException
 from app.utils.logging import get_logger
 
@@ -152,129 +146,4 @@ class ModeratorService:
             reporter_username=updated_report.user.username
             if updated_report.user
             else None,
-        )
-
-    # Post Management
-    async def get_all_posts(self, skip: int = 0, limit: int = 100) -> PostListResponse:
-        """Get all posts with total count."""
-        from app.posts.schema import TagResponse
-
-        posts, total = await self.post_repository.get_all_posts(skip, limit)
-        posts_response = [
-            PostResponse(
-                id=post.id,
-                author_id=post.author_id,
-                title=post.title,
-                description=post.description,
-                tags=[TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in post.tags],
-                created_at=post.created_at,
-                updated_at=post.updated_at,
-            )
-            for post in posts
-        ]
-        return PostListResponse(posts=posts_response, total=total)
-
-    async def update_any_post(
-        self, post_id: int, post_data: PostUpdate
-    ) -> PostResponse:
-        """Update any post (moderator privilege)."""
-        from app.posts.schema import TagResponse
-
-        post = await self.post_repository.get_post_by_id(post_id)
-        if not post:
-            raise NotFoundException(f"Post with id {post_id} not found")
-
-        # Update post fields
-        post = await self.post_repository.update_post(
-            post, title=post_data.title, description=post_data.description
-        )
-
-        # Update tags if provided
-        if post_data.tags is not None:
-            await self.post_repository.remove_tags_from_post(post)
-            if post_data.tags:
-                tags = []
-                for tag_name in post_data.tags:
-                    tag = await self.post_repository.get_or_create_tag(tag_name)
-                    tags.append(tag)
-                await self.post_repository.add_tags_to_post(post, tags)
-
-        # Fetch updated post
-        updated_post = await self.post_repository.get_post_by_id(post_id)
-        return PostResponse(
-            id=updated_post.id,
-            author_id=updated_post.author_id,
-            title=updated_post.title,
-            description=updated_post.description,
-            tags=[
-                TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in updated_post.tags
-            ],
-            created_at=updated_post.created_at,
-            updated_at=updated_post.updated_at,
-        )
-
-    async def delete_any_post(self, post_id: int, report_id: int = None) -> None:
-        """Delete any post (moderator privilege). Optionally marks associated report as reviewed."""
-        post = await self.post_repository.get_post_by_id(post_id)
-        if not post:
-            raise NotFoundException(f"Post with id {post_id} not found")
-        await self.post_repository.delete_post(post)
-
-        # If report_id is provided, mark it as deleted
-        if report_id:
-            reports = await self.post_repository.get_pending_post_reports(
-                skip=0, limit=1000
-            )
-            report = next((r for r in reports if r.id == report_id), None)
-            if report:
-                await self.post_repository.update_report_status(report, "Deleted")
-
-    # Comment Management
-    async def update_any_comment(
-        self, comment_id: int, comment_data: CommentUpdate
-    ) -> CommentResponse:
-        """Update any comment (moderator privilege)."""
-        comment = await self.comment_repository.get_comment_by_id(comment_id)
-        if not comment:
-            raise NotFoundException(f"Comment with id {comment_id} not found")
-
-        comment = await self.comment_repository.update_comment(
-            comment, title=comment_data.title, description=comment_data.description
-        )
-
-        return await self._comment_to_response(comment)
-
-    async def delete_any_comment(self, comment_id: int, report_id: int = None) -> None:
-        """Delete any comment (moderator privilege). Optionally marks associated report as reviewed."""
-        comment = await self.comment_repository.get_comment_by_id(comment_id)
-        if not comment:
-            raise NotFoundException(f"Comment with id {comment_id} not found")
-        await self.comment_repository.delete_comment(comment)
-
-        # If report_id is provided, mark it as deleted
-        if report_id:
-            reports = await self.comment_repository.get_pending_comment_reports(
-                skip=0, limit=1000
-            )
-            report = next((r for r in reports if r.id == report_id), None)
-            if report:
-                await self.comment_repository.update_report_status(report, "Deleted")
-
-    async def _comment_to_response(self, comment: Comment) -> CommentResponse:
-        """Convert Comment model to CommentResponse."""
-        likes_count = await self.comment_repository.get_comment_likes_count(comment.id)
-        replies = await self.comment_repository.get_replies(comment.id)
-        reply_responses = [await self._comment_to_response(reply) for reply in replies]
-
-        return CommentResponse(
-            id=comment.id,
-            author_id=comment.author_id,
-            post_id=comment.post_id,
-            title=comment.title,
-            description=comment.description,
-            parent_comment_id=comment.parent_comment_id,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-            likes_count=likes_count,
-            replies=reply_responses,
         )

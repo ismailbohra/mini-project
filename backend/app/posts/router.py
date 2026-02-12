@@ -3,7 +3,11 @@ import json
 from typing import List, Optional
 
 import app.utils.redis as redis_utils
-from app.auth.dependency import get_current_user_id, get_current_user_id_optional
+from app.auth.dependency import (
+    get_current_user_id,
+    get_current_user_id_optional,
+    get_current_user_role,
+)
 from app.posts.dependency import get_post_service
 from app.posts.schema import (
     PostCreate,
@@ -176,9 +180,10 @@ async def update_post(
     tags: str | None = Form(None),
     image: UploadFile | None = File(None),
     user_id: int = Depends(get_current_user_id),
+    user_role: str = Depends(get_current_user_role),
     post_service: PostService = Depends(get_post_service),
 ):
-    """Update a post (supports optional image)."""
+    """Update a post (supports optional image). Owner, Admin, or Moderator can update."""
     update_payload = {}
     if title is not None:
         update_payload["title"] = title
@@ -196,7 +201,12 @@ async def update_post(
 
     post_update = PostUpdate(**update_payload)
     return await post_service.update_post(
-        post_id, user_id, post_update, user_id, image_path=image_path
+        post_id,
+        user_id,
+        post_update,
+        user_id,
+        image_path=image_path,
+        user_role=user_role,
     )
 
 
@@ -208,10 +218,11 @@ async def update_post(
 async def delete_post(
     post_id: int,
     user_id: int = Depends(get_current_user_id),
+    user_role: str = Depends(get_current_user_role),
     post_service: PostService = Depends(get_post_service),
 ):
-    """Delete a post. Only the author can delete their own posts."""
-    await post_service.delete_post(post_id, user_id)
+    """Delete a post. Owner, Admin, or Moderator can delete."""
+    await post_service.delete_post(post_id, user_id, user_role=user_role)
 
 
 # Post Like endpoints

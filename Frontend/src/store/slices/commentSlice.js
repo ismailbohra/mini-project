@@ -21,6 +21,27 @@ const commentSlice = createSlice({
     addComment: (state, action) => {
       state.comments.unshift(action.payload);
     },
+    addReply: (state, action) => {
+      const { parentCommentId, reply } = action.payload;
+      const addReplyRecursive = (comments, parentId, newReply) => {
+        return comments.map(comment => {
+          if (comment.id === parentId) {
+            return {
+              ...comment,
+              replies: [...(comment.replies || []), newReply],
+            };
+          }
+          if (comment.replies && comment.replies.length > 0) {
+            return {
+              ...comment,
+              replies: addReplyRecursive(comment.replies, parentId, newReply),
+            };
+          }
+          return comment;
+        });
+      };
+      state.comments = addReplyRecursive(state.comments, parentCommentId, reply);
+    },
     updateComment: (state, action) => {
       const updateCommentRecursive = (comments, updatedComment) => {
         return comments.map(comment => {
@@ -59,6 +80,26 @@ const commentSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateCommentLikesCount: (state, action) => {
+      const { commentId, likesCount, userHasLiked } = action.payload;
+      console.log('[CommentSlice] Updating comment likes:', { commentId, likesCount, userHasLiked });
+      const updateLikesRecursive = (comments) => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            console.log('[CommentSlice] Comment found and updated:', commentId);
+            return { ...comment, likes_count: likesCount, user_has_liked: userHasLiked };
+          }
+          if (comment.replies && comment.replies.length > 0) {
+            return {
+              ...comment,
+              replies: updateLikesRecursive(comment.replies),
+            };
+          }
+          return comment;
+        });
+      };
+      state.comments = updateLikesRecursive(state.comments);
+    },
   },
 });
 
@@ -66,10 +107,12 @@ export const {
   setLoading,
   setComments,
   addComment,
+  addReply,
   updateComment,
   deleteComment,
   setError,
   clearError,
+  updateCommentLikesCount,
 } = commentSlice.actions;
 
 export default commentSlice.reducer;

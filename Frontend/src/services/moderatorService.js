@@ -1,4 +1,6 @@
 import api from './api';
+import { postService } from './postService';
+import { commentService } from './commentService';
 
 export const moderatorService = {
   // Get pending post reports
@@ -29,34 +31,45 @@ export const moderatorService = {
     return response.data;
   },
 
-  // Get all posts (Moderator)
+  // Get all posts (Moderator) - uses common endpoint
   getAllPosts: async (params = {}) => {
-    const response = await api.get('/moderator/posts', { params });
-    return response.data;
+    return await postService.getPosts(params);
   },
 
-  // Update any post (Moderator)
+  // Update any post (Moderator) - uses common endpoint with role-based permissions
   updateAnyPost: async (postId, postData) => {
-    const response = await api.put(`/moderator/posts/${postId}`, postData);
-    return response.data;
+    return await postService.updatePost(postId, postData);
   },
 
-  // Delete any post (Moderator)
+  // Delete any post (Moderator) - uses common endpoint with role-based permissions
   deleteAnyPost: async (postId, reportId = null) => {
-    const params = reportId ? { report_id: reportId } : {};
-    await api.delete(`/moderator/posts/${postId}`, { params });
+    await postService.deletePost(postId);
+    // If report_id is provided, mark it as deleted
+    if (reportId) {
+      try {
+        await moderatorService.updatePostReportStatus(reportId, 'Deleted');
+      } catch (error) {
+        console.error('Failed to update report status after deletion:', error);
+      }
+    }
   },
 
-  // Update any comment (Moderator)
-  updateAnyComment: async (commentId, content) => {
-    const response = await api.put(`/moderator/comments/${commentId}`, { content });
-    return response.data;
+  // Update any comment (Moderator) - uses common endpoint with role-based permissions
+  updateAnyComment: async (commentId, commentData) => {
+    return await commentService.updateComment(commentId, commentData);
   },
 
-  // Delete any comment (Moderator)
+  // Delete any comment (Moderator) - uses common endpoint with role-based permissions
   deleteAnyComment: async (commentId, reportId = null) => {
-    const params = reportId ? { report_id: reportId } : {};
-    await api.delete(`/moderator/comments/${commentId}`, { params });
+    await commentService.deleteComment(commentId);
+    // If report_id is provided, mark it as deleted
+    if (reportId) {
+      try {
+        await moderatorService.updateCommentReportStatus(reportId, 'Deleted');
+      } catch (error) {
+        console.error('Failed to update report status after deletion:', error);
+      }
+    }
   },
 };
 

@@ -152,6 +152,12 @@ const Header = ({ toggleSidebar }) => {
           Forum
         </Link>
 
+        {user && (user.role === 'Admin' || user.role === 'Moderator') && (
+          <span className="badge bg-warning text-dark ms-2">
+            {user.role}
+          </span>
+        )}
+
         <form className="d-none d-md-flex mx-auto position-relative" style={{ width: '40%' }} onSubmit={handleSearch} ref={searchRef}>
           <div className="input-group">
             <input

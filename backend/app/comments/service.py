@@ -91,6 +91,16 @@ class CommentService:
                         },
                     )
 
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "comment.state.updated",
+                {
+                    "post_id": comment_data.post_id,
+                    "comment_id": comment.id,
+                    "actor_id": author_id,
+                },
+            )
+
         return await self._comment_to_response(comment_with_author, current_user_id)
 
     async def get_comment(
@@ -133,37 +143,67 @@ class CommentService:
         author_id: int,
         comment_data: CommentUpdate,
         current_user_id: Optional[int] = None,
+        user_role: Optional[str] = None,
     ) -> CommentResponse:
         """Update a comment."""
         comment = await self.repository.get_comment_by_id(comment_id)
         if not comment:
             raise NotFoundException(f"Comment with id {comment_id} not found")
 
-        # Check if user is the author
-        if comment.author_id != author_id:
+        # Check if user is the author or has admin/moderator role
+        from app.auth.model import RoleType
+
+        is_admin_or_moderator = user_role in [
+            RoleType.ADMIN.value,
+            RoleType.MODERATOR.value,
+        ]
+        if comment.author_id != author_id and not is_admin_or_moderator:
             raise ForbiddenException("You can only update your own comments")
 
         comment = await self.repository.update_comment(
             comment, title=comment_data.title, description=comment_data.description
         )
 
+        await redis_utils.delete_cache(f"post:{comment.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
 
         # Fetch the updated comment with author loaded
         updated_comment = await self.repository.get_comment_by_id(comment.id)
         return await self._comment_to_response(updated_comment, current_user_id)
 
-    async def delete_comment(self, comment_id: int, author_id: int) -> None:
+    async def delete_comment(
+        self, comment_id: int, author_id: int, user_role: Optional[str] = None
+    ) -> None:
         """Delete a comment."""
         comment = await self.repository.get_comment_by_id(comment_id)
         if not comment:
             raise NotFoundException(f"Comment with id {comment_id} not found")
 
-        # Check if user is the author
-        if comment.author_id != author_id:
+        # Check if user is the author or has admin/moderator role
+        from app.auth.model import RoleType
+
+        is_admin_or_moderator = user_role in [
+            RoleType.ADMIN.value,
+            RoleType.MODERATOR.value,
+        ]
+        if comment.author_id != author_id and not is_admin_or_moderator:
             raise ForbiddenException("You can only delete your own comments")
 
+        post_id = comment.post_id
         await self.repository.delete_comment(comment)
+
+        await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_cache(f"comments:post:{post_id}")
+
+        if event_bus_module.event_bus:
+            await event_bus_module.event_bus.publish(
+                "comment.deleted",
+                {
+                    "post_id": post_id,
+                    "comment_id": comment_id,
+                    "actor_id": author_id,
+                },
+            )
 
     async def like_comment(self, user_id: int, comment_id: int) -> CommentLikeResponse:
         """Like a comment."""
@@ -179,6 +219,7 @@ class CommentService:
 
         like = await self.repository.add_comment_like(user_id, comment_id)
 
+        await redis_utils.delete_cache(f"post:{comment.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
 
         # Emit event
@@ -193,6 +234,14 @@ class CommentService:
                     "comment_id": comment_id,
                     "actor_id": user_id,
                     "comment_author_id": comment.author_id,
+                },
+            )
+            await event_bus_module.event_bus.publish(
+                "comment.state.updated",
+                {
+                    "post_id": comment.post_id,
+                    "comment_id": comment_id,
+                    "actor_id": user_id,
                 },
             )
             logger.debug("comment.liked event published successfully")
@@ -213,7 +262,30 @@ class CommentService:
         if not existing_like:
             raise NotFoundException("Like not found")
 
+        comment = await self.repository.get_comment_by_id(comment_id)
         await self.repository.remove_comment_like(user_id, comment_id)
+
+        if comment:
+            await redis_utils.delete_cache(f"post:{comment.post_id}")
+            await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
+
+            if event_bus_module.event_bus:
+                await event_bus_module.event_bus.publish(
+                    "comment.unliked",
+                    {
+                        "post_id": comment.post_id,
+                        "comment_id": comment_id,
+                        "actor_id": user_id,
+                    },
+                )
+                await event_bus_module.event_bus.publish(
+                    "comment.state.updated",
+                    {
+                        "post_id": comment.post_id,
+                        "comment_id": comment_id,
+                        "actor_id": user_id,
+                    },
+                )
 
     async def report_comment(
         self, user_id: int, comment_id: int, reason: str

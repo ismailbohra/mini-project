@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
+import { toast } from 'react-toastify';
 import authService from '../services/authService';
 
 const Register = () => {
@@ -70,9 +71,15 @@ const Register = () => {
       const userData = await authService.getCurrentUser();
       dispatch(loginSuccess({ ...response, user: userData }));
       navigate('/');
+      // Show success toast after navigation so Layout's ToastContainer is mounted
+      setTimeout(() => {
+        toast.success('Account created successfully');
+      }, 250);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed');
-      dispatch(loginFailure(err.response?.data?.detail || 'Registration failed'));
+        const apiMessage = err.response?.data?.error?.message || err.response?.data?.detail || err.response?.data?.message;
+        const message = apiMessage || err.message || 'Registration failed';
+        setError(message);
+        dispatch(loginFailure(message));
     }
   };
 

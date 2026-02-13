@@ -1,7 +1,16 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 
+import app.utils.redis as redis_utils
 from app.auth.dependency import get_current_user_id
 from app.notifications.dependency import get_notification_service
 from app.notifications.schema import NotificationResponse
@@ -32,7 +41,18 @@ async def get_notifications(
 async def get_unread_count(
     user_id: int = Depends(get_current_user_id),
     service: NotificationService = Depends(get_notification_service),
+    response: Response = None,
 ):
+    cache_key = f"notifications:unread:{user_id}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached is not None:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return cached
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await service.get_unread_count(user_id)
 
 

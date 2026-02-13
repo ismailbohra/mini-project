@@ -1,5 +1,6 @@
 from typing import List
 
+import app.utils.redis as redis_utils
 from app.notifications.interface import NotificationRepositoryInterface
 from app.notifications.model import Notification
 from app.notifications.schema import NotificationResponse
@@ -28,13 +29,25 @@ class NotificationService:
             from app.utils.exceptions import NotFoundException
 
             raise NotFoundException("Notification not found")
+
+        await redis_utils.delete_cache(f"notifications:unread:{user_id}")
+
         return self._to_response(notification)
 
     async def mark_all_as_read(self, user_id: int) -> None:
         await self.repository.mark_all_as_read(user_id)
+        await redis_utils.delete_cache(f"notifications:unread:{user_id}")
 
     async def get_unread_count(self, user_id: int) -> int:
-        return await self.repository.get_unread_count(user_id)
+        cache_key = f"notifications:unread:{user_id}"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        count = await self.repository.get_unread_count(user_id)
+        await redis_utils.set_cache(cache_key, count, expire=60)
+
+        return count
 
     def _to_response(self, notification: Notification) -> NotificationResponse:
         return NotificationResponse(

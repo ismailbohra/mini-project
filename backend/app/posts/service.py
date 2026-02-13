@@ -60,6 +60,9 @@ class PostService:
         # Fetch the post with tags to return
         post_with_tags = await self.repository.get_post_by_id(post.id)
 
+        await redis_utils.delete_pattern("posts:list:*")
+        await redis_utils.delete_pattern(f"posts:user:{author_id}:*")
+
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
                 "post.new_post_added",
@@ -97,11 +100,22 @@ class PostService:
         current_user_id: Optional[int] = None,
     ) -> PostListResponse:
         """Get all posts by a user with total count."""
+        cache_key = f"posts:user:{author_id}:{skip}:{limit}"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return PostListResponse(**cached)
+
         posts, total = await self.repository.get_posts_by_author(author_id, skip, limit)
         posts_response = [
             await self._post_to_response(post, current_user_id) for post in posts
         ]
-        return PostListResponse(posts=posts_response, total=total)
+        result = PostListResponse(posts=posts_response, total=total)
+
+        await redis_utils.set_cache(
+            cache_key, result.model_dump(mode="json"), expire=600
+        )
+
+        return result
 
     async def get_all_posts(
         self,
@@ -114,13 +128,28 @@ class PostService:
         sort_order: str = "desc",
     ) -> PostListResponse:
         """Get all posts with search, filter, and sort, including total count."""
+        search_str = search or ""
+        tags_str = ",".join(sorted(tags)) if tags else ""
+        cache_key = (
+            f"posts:list:{skip}:{limit}:{search_str}:{tags_str}:{sort_by}:{sort_order}"
+        )
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return PostListResponse(**cached)
+
         posts, total = await self.repository.get_all_posts(
             skip, limit, search, tags, sort_by, sort_order
         )
         posts_response = [
             await self._post_to_response(post, current_user_id) for post in posts
         ]
-        return PostListResponse(posts=posts_response, total=total)
+        result = PostListResponse(posts=posts_response, total=total)
+
+        await redis_utils.set_cache(
+            cache_key, result.model_dump(mode="json"), expire=300
+        )
+
+        return result
 
     async def update_post(
         self,
@@ -177,6 +206,8 @@ class PostService:
         updated_post = await self.repository.get_post_by_id(post_id)
 
         await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_pattern("posts:list:*")
+        await redis_utils.delete_pattern(f"posts:user:{post.author_id}:*")
 
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -211,6 +242,8 @@ class PostService:
 
         await redis_utils.delete_cache(f"post:{post_id}")
         await redis_utils.delete_cache(f"comments:post:{post_id}")
+        await redis_utils.delete_pattern("posts:list:*")
+        await redis_utils.delete_pattern(f"posts:user:{post.author_id}:*")
 
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -250,8 +283,21 @@ class PostService:
             }
 
         # Get likes count
-        likes_count = await self.repository.get_post_likes_count(post.id)
-        comments_count = await self.repository.get_post_comments_count(post.id)
+        likes_cache_key = f"post:{post.id}:likes_count"
+        cached_likes = await redis_utils.get_cache(likes_cache_key)
+        if cached_likes is not None:
+            likes_count = cached_likes
+        else:
+            likes_count = await self.repository.get_post_likes_count(post.id)
+            await redis_utils.set_cache(likes_cache_key, likes_count, expire=120)
+
+        comments_cache_key = f"post:{post.id}:comments_count"
+        cached_comments = await redis_utils.get_cache(comments_cache_key)
+        if cached_comments is not None:
+            comments_count = cached_comments
+        else:
+            comments_count = await self.repository.get_post_comments_count(post.id)
+            await redis_utils.set_cache(comments_cache_key, comments_count, expire=120)
 
         # Check if current user has liked this post
         user_has_liked = False
@@ -290,6 +336,7 @@ class PostService:
         like = await self.repository.add_post_like(user_id, post_id)
 
         await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_cache(f"post:{post_id}:likes_count")
 
         # Emit event for notification (only to author)
         logger.debug(
@@ -332,6 +379,7 @@ class PostService:
         await self.repository.remove_post_like(user_id, post_id)
 
         await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_cache(f"post:{post_id}:likes_count")
 
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -373,14 +421,35 @@ class PostService:
 
     async def get_all_tags(self) -> List[TagResponse]:
         """Get all tags."""
+        cache_key = "tags:all"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return [TagResponse(**item) for item in cached]
+
         tags = await self.repository.get_all_tags()
-        return [TagResponse(id=tag.id, name=tag.name) for tag in tags]
+        result = [TagResponse(id=tag.id, name=tag.name) for tag in tags]
+
+        await redis_utils.set_cache(
+            cache_key, [r.model_dump(mode="json") for r in result], expire=3600
+        )
+
+        return result
 
     async def search_suggestions(self, search: str, limit: int = 10) -> List[dict]:
         """Get search suggestions based on partial match."""
         if not search or len(search) < 2:
             return []
-        return await self.repository.search_suggestions(search, limit)
+
+        cache_key = f"search:suggestions:{search}:{limit}"
+        cached = await redis_utils.get_cache(cache_key)
+        if cached:
+            return cached
+
+        result = await self.repository.search_suggestions(search, limit)
+
+        await redis_utils.set_cache(cache_key, result, expire=600)
+
+        return result
 
     async def _process_mentions(
         self, post_id: int, content: str, author_id: int

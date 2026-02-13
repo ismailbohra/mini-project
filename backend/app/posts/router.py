@@ -37,8 +37,19 @@ async def get_search_suggestions(
     ),
     limit: int = Query(10, ge=1, le=20),
     post_service: PostService = Depends(get_post_service),
+    response: Response = None,
 ):
     """Get search suggestions based on partial match in titles, authors, and tags."""
+    cache_key = f"search:suggestions:{search}:{limit}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return cached
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.search_suggestions(search, limit)
 
 
@@ -50,8 +61,19 @@ async def get_search_suggestions(
 )
 async def get_all_tags(
     post_service: PostService = Depends(get_post_service),
+    response: Response = None,
 ):
     """Return all tags."""
+    cache_key = "tags:all"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return [TagResponse(**item) for item in cached]
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.get_all_tags()
 
 
@@ -130,8 +152,23 @@ async def get_all_posts(
     sort_order: str = Query("desc", description="Sort order (asc, desc)"),
     post_service: PostService = Depends(get_post_service),
     current_user_id: Optional[int] = Depends(get_current_user_id_optional),
+    response: Response = None,
 ):
     """Get all posts with search, filter, and sort capabilities."""
+    search_str = search or ""
+    tags_str = ",".join(sorted(tags)) if tags else ""
+    cache_key = (
+        f"posts:list:{skip}:{limit}:{search_str}:{tags_str}:{sort_by}:{sort_order}"
+    )
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return PostListResponse(**cached)
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.get_all_posts(
         skip, limit, current_user_id, search, tags, sort_by, sort_order
     )
@@ -147,8 +184,19 @@ async def get_my_posts(
     limit: int = Query(100, ge=1, le=100),
     user_id: int = Depends(get_current_user_id),
     post_service: PostService = Depends(get_post_service),
+    response: Response = None,
 ):
     """Get all posts by the authenticated user."""
+    cache_key = f"posts:user:{user_id}:{skip}:{limit}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return PostListResponse(**cached)
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.get_user_posts(user_id, skip, limit, user_id)
 
 
@@ -163,8 +211,19 @@ async def get_user_posts(
     limit: int = Query(100, ge=1, le=100),
     post_service: PostService = Depends(get_post_service),
     current_user_id: Optional[int] = Depends(get_current_user_id_optional),
+    response: Response = None,
 ):
     """Get all posts by a specific user."""
+    cache_key = f"posts:user:{author_id}:{skip}:{limit}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return PostListResponse(**cached)
+
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+
     return await post_service.get_user_posts(author_id, skip, limit, current_user_id)
 
 

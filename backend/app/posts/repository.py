@@ -210,6 +210,11 @@ class PostRepository(PostRepositoryInterface):
         self.session.add(new_tag)
         await self.session.commit()
         await self.session.refresh(new_tag)
+
+        import app.utils.redis as redis_utils
+
+        await redis_utils.delete_cache("tags:all")
+
         return new_tag
 
     async def add_tags_to_post(self, post: Posts, tags: List[Tags]) -> None:

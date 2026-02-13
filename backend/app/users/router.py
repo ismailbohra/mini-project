@@ -5,7 +5,8 @@ from app.users.dependency import get_user_service
 from app.users.schema import UserCreate, UserMentionResponse, UserResponse, UserUpdate
 from app.users.service import UserService
 from app.utils.upload import save_upload_file
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+import app.utils.redis as redis_utils
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from pydantic import EmailStr
 
 router = APIRouter(prefix="/users", tags=["User"])
@@ -54,6 +55,7 @@ async def search_users_for_mentions(
     limit: int = Query(10, ge=1, le=20),
     service: UserService = Depends(get_user_service),
     user_id: int = Depends(get_current_user_id),
+    response: Response = None,
 ):
     """
     Search users by username for @mention autocomplete.
@@ -65,14 +67,40 @@ async def search_users_for_mentions(
 
     Used for mention suggestions when typing @username in posts/comments.
     """
+    cache_key = f"search:mentions:{q}:{limit}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        return [UserMentionResponse(**item) for item in cached]
+    
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+    
     return await service.search_users_for_mentions(q, limit)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, service: UserService = Depends(get_user_service)):
+async def get_user(
+    user_id: int, 
+    service: UserService = Depends(get_user_service),
+    response: Response = None,
+):
     """
     Get a user by ID
     """
+    cache_key = f"user:profile:{user_id}"
+    cached = await redis_utils.get_cache(cache_key)
+    if cached:
+        if response is not None:
+            response.headers["X-Cache"] = "HIT"
+        from app.users.model import User
+        user = User(**cached)
+        return user
+    
+    if response is not None:
+        response.headers["X-Cache"] = "MISS"
+    
     return await service.get_user(user_id)
 
 

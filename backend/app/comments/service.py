@@ -64,6 +64,7 @@ class CommentService:
 
         await redis_utils.delete_cache(f"post:{comment_data.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment_data.post_id}")
+        await redis_utils.delete_cache(f"post:{comment_data.post_id}:comments_count")
 
         # Emit event
         if comment_data.parent_comment_id:
@@ -206,6 +207,7 @@ class CommentService:
 
         await redis_utils.delete_cache(f"post:{post_id}")
         await redis_utils.delete_cache(f"comments:post:{post_id}")
+        await redis_utils.delete_cache(f"post:{post_id}:comments_count")
 
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(
@@ -233,6 +235,7 @@ class CommentService:
 
         await redis_utils.delete_cache(f"post:{comment.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
+        await redis_utils.delete_cache(f"comment:{comment_id}:likes_count")
 
         # Emit event
         logger.debug(
@@ -280,6 +283,7 @@ class CommentService:
         if comment:
             await redis_utils.delete_cache(f"post:{comment.post_id}")
             await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
+            await redis_utils.delete_cache(f"comment:{comment_id}:likes_count")
 
             if event_bus_module.event_bus:
                 await event_bus_module.event_bus.publish(
@@ -331,7 +335,13 @@ class CommentService:
     ) -> CommentResponse:
         """Convert Comment model to CommentResponse with nested replies."""
         # Get likes count
-        likes_count = await self.repository.get_comment_likes_count(comment.id)
+        likes_cache_key = f"comment:{comment.id}:likes_count"
+        cached_likes = await redis_utils.get_cache(likes_cache_key)
+        if cached_likes is not None:
+            likes_count = cached_likes
+        else:
+            likes_count = await self.repository.get_comment_likes_count(comment.id)
+            await redis_utils.set_cache(likes_cache_key, likes_count, expire=120)
 
         # Check if current user has liked this comment
         user_has_liked = False

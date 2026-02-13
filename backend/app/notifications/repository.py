@@ -4,6 +4,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+import app.utils.redis as redis_utils
 from app.notifications.interface import NotificationRepositoryInterface
 from app.notifications.model import Notification
 
@@ -37,6 +38,9 @@ class NotificationRepository(NotificationRepositoryInterface):
             .options(selectinload(Notification.actor))
         )
         result = await self.session.execute(query)
+
+        await redis_utils.delete_cache(f"notifications:unread:{receiver_id}")
+
         return result.scalar_one()
 
     async def get_user_notifications(

@@ -10,6 +10,7 @@ from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.comments.router import router as comments_router
 from app.config.settings import settings
+from app.middleware import RoleVerificationMiddleware
 from app.moderator.router import router as moderator_router
 from app.notifications.router import router as notifications_router
 from app.posts.router import router as posts_router
@@ -78,6 +79,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add role verification middleware to check if user's role has been modified
+app.add_middleware(RoleVerificationMiddleware)
 
 app.include_router(auth_router)
 app.include_router(users_router)

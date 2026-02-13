@@ -1,12 +1,13 @@
 from typing import List, Optional
 
+from app.admin.interface import AdminRepositoryInterface
 from app.auth.model import RoleType
 from app.users.model import User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class AdminRepository:
+class AdminRepository(AdminRepositoryInterface):
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -25,6 +26,14 @@ class AdminRepository:
     async def update_user_role(self, user: User, role: RoleType) -> User:
         """Update user role."""
         user.role = role
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
+    async def toggle_user(self, user: User) -> User:
+        """Toggle a user's active status (activate/deactivate)."""
+        # Flip the active flag
+        user.is_active = not user.is_active
         await self.session.commit()
         await self.session.refresh(user)
         return user

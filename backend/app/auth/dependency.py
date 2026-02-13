@@ -106,8 +106,9 @@ async def get_current_user_role(
     if not user:
         raise UnauthorizedException("User not found")
 
-    if not user.is_active:
-        raise UnauthorizedException("User account is inactive")
+    if not user.is_active or user.is_deleted:
+        status_msg = "inactive" if not user.is_active else "deleted"
+        raise UnauthorizedException(f"User account is {status_msg}")
 
     # Store role in Redis cache for future requests
     role = user.role.value

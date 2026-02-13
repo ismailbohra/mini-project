@@ -1,7 +1,7 @@
 from typing import List
 
 from app.admin.dependency import get_admin_service
-from app.admin.schema import AssignRoleRequest
+from app.admin.schema import AssignRoleRequest, AssignRoleResponse, ToggleUserResponse
 from app.admin.service import AdminService
 from app.auth.dependency import get_current_user_id, require_admin
 from app.users.schema import UserResponse
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.post(
     "/assign-role",
-    response_model=UserResponse,
+    response_model=AssignRoleResponse,
     summary="Assign role to user (Admin only)",
     description="Admin can assign roles (Admin, User, Moderator) to any user",
 )
@@ -21,7 +21,7 @@ async def assign_role(
     user_id: int = Depends(get_current_user_id),
     admin_service: AdminService = Depends(get_admin_service),
     _: bool = Depends(require_admin),
-) -> UserResponse:
+) -> AssignRoleResponse:
     """
     Assign a role to a user (Admin only):
     - **user_id**: Target user's ID
@@ -52,3 +52,23 @@ async def get_all_users(
     Requires Admin role.
     """
     return await admin_service.get_all_users(skip=skip, limit=limit)
+
+
+@router.patch(
+    "/users/{user_id}/toggle",
+    response_model=ToggleUserResponse,
+    summary="Toggle user's active status (Admin only)",
+    description="Admin can activate or deactivate any user by their ID",
+)
+async def toggle_user(
+    user_id: int,
+    admin_service: AdminService = Depends(get_admin_service),
+    _: bool = Depends(require_admin),
+) -> ToggleUserResponse:
+    """
+    Toggle a user's active status (Admin only)
+    - **user_id**: ID of the user to toggle (activate/deactivate)
+
+    Requires Admin role.
+    """
+    return await admin_service.toggle_user(user_id)

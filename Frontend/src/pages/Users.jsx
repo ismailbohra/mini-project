@@ -46,17 +46,18 @@ const Users = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+  const handleToggleUser = async (userId, isActive) => {
+    const action = isActive ? 'deactivate' : 'activate';
+    if (!window.confirm(`Are you sure you want to ${action} this user?`)) {
       return;
     }
 
     try {
-      await userService.deleteUser(userId);
-      toast.success('User deleted successfully');
+      const updated = await userService.toggleUser(userId);
+      toast.success(`User ${updated.is_active ? 'activated' : 'deactivated'} successfully`);
       loadUsers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete user');
+      toast.error(error.response?.data?.detail || `Failed to ${action} user`);
     }
   };
 
@@ -90,7 +91,11 @@ const Users = () => {
         <>
           <div className="card shadow-sm">
             <div className="card-body">
-              <div className="table-responsive">
+              {/* 🔧 overflow fix */}
+              <div
+                className="table-responsive"
+                style={{ overflow: 'visible' }}
+              >
                 <table className="table table-hover">
                   <thead className="table-light">
                     <tr>
@@ -99,19 +104,23 @@ const Users = () => {
                       <th>Email</th>
                       <th>Role</th>
                       <th>Registration Date</th>
-                      <th>Actions</th>
+                      <th>Change Role</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center text-muted">
+                        <td colSpan="7" className="text-center text-muted">
                           No users found
                         </td>
                       </tr>
                     ) : (
                       users.map((user) => (
-                        <tr key={user.id}>
+                        <tr
+                          key={user.id}
+                          style={{ position: 'relative' }} // 🔧 row stacking fix
+                        >
                           <td>{user.id}</td>
                           <td>
                             <i className="bi bi-person-circle me-2"></i>
@@ -119,59 +128,107 @@ const Users = () => {
                           </td>
                           <td>{user.email}</td>
                           <td>
-                            <span className={`badge ${
-                              user.role === 'Admin' ? 'bg-danger' :
-                              user.role === 'Moderator' ? 'bg-warning' :
-                              'bg-info'
-                            }`}>
+                            <span
+                              className={`badge ${
+                                user.role === 'Admin'
+                                  ? 'bg-danger'
+                                  : user.role === 'Moderator'
+                                  ? 'bg-warning'
+                                  : 'bg-info'
+                              }`}
+                            >
                               {user.role}
                             </span>
                           </td>
                           <td>{formatDate(user.created_at)}</td>
+
+                          {/* ✅ FIXED DROPDOWN */}
                           <td>
-                            <div className="btn-group" role="group">
+                            <div
+                              className="dropdown d-inline-block"
+                              style={{
+                                position: 'static', // 🔧 critical fix
+                              }}
+                            >
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline-primary dropdown-toggle"
+                                className="btn btn-sm btn-primary dropdown-toggle"
                                 data-bs-toggle="dropdown"
+                                data-bs-display="static"
+                                aria-expanded="false"
                               >
                                 Change Role
                               </button>
-                              <ul className="dropdown-menu">
-                                <li>
-                                  <button
-                                    className="dropdown-item"
-                                    onClick={() => handleRoleChange(user.id, 'User')}
-                                    disabled={user.role === 'User'}
-                                  >
-                                    User
-                                  </button>
-                                </li>
-                                <li>
-                                  <button
-                                    className="dropdown-item"
-                                    onClick={() => handleRoleChange(user.id, 'Moderator')}
-                                    disabled={user.role === 'Moderator'}
-                                  >
-                                    Moderator
-                                  </button>
-                                </li>
-                                <li>
-                                  <button
-                                    className="dropdown-item"
-                                    onClick={() => handleRoleChange(user.id, 'Admin')}
-                                    disabled={user.role === 'Admin'}
-                                  >
-                                    Admin
-                                  </button>
-                                </li>
-                              </ul>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDeleteUser(user.id)}
+
+                              <ul
+                                className="dropdown-menu"
+                                style={{
+                                  zIndex: 1055, // 🔧 force top layer
+                                }}
                               >
-                                <i className="bi bi-trash"></i>
-                              </button>
+                                {user.role !== 'User' && (
+                                  <li>
+                                    <button
+                                      className="dropdown-item"
+                                      onClick={() =>
+                                        handleRoleChange(user.id, 'User')
+                                      }
+                                    >
+                                      User
+                                    </button>
+                                  </li>
+                                )}
+                                {user.role !== 'Moderator' && (
+                                  <li>
+                                    <button
+                                      className="dropdown-item"
+                                      onClick={() =>
+                                        handleRoleChange(user.id, 'Moderator')
+                                      }
+                                    >
+                                      Moderator
+                                    </button>
+                                  </li>
+                                )}
+                                {user.role !== 'Admin' && (
+                                  <li>
+                                    <button
+                                      className="dropdown-item"
+                                      onClick={() =>
+                                        handleRoleChange(user.id, 'Admin')
+                                      }
+                                    >
+                                      Admin
+                                    </button>
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
+                          </td>
+
+                          <td>
+                            <div
+                              className="form-check form-switch"
+                              style={{ position: 'relative', zIndex: 1 }}
+                            >
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id={`statusToggle${user.id}`}
+                                checked={user.is_active}
+                                onChange={() =>
+                                  handleToggleUser(user.id, user.is_active)
+                                }
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <label
+                                className="form-check-label"
+                                htmlFor={`statusToggle${user.id}`}
+                                style={{ cursor: 'pointer', userSelect: 'none' }}
+                              >
+                                {user.is_active ? 'Active' : 'Inactive'}
+                              </label>
                             </div>
                           </td>
                         </tr>

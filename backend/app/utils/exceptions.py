@@ -106,6 +106,15 @@ class InactiveUserException(ForbiddenException):
         super().__init__(message=message)
 
 
+class UserAlreadyDeleted(NotFoundException):
+    """
+    UserAlreadyDeleted
+    """
+
+    def __init__(self, message="User Already Deleted"):
+        super().__init__(message)
+
+
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """Handle custom application exceptions."""
     logger.error(

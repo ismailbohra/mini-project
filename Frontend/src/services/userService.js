@@ -1,3 +1,4 @@
+import { use } from 'react';
 import api from './api';
 
 export const userService = {
@@ -9,15 +10,17 @@ export const userService = {
 
   // Update user role (Admin only)
   updateUserRole: async (userId, role) => {
-    const response = await api.put(`/admin/users/${userId}/role`, null, {
-      params: { role },
+    const response = await api.post(`/admin/assign-role`, {
+      user_id: userId,
+      role: role,
     });
     return response.data;
   },
 
-  // Delete user (Admin only)
-  deleteUser: async (userId) => {
-    await api.delete(`/admin/users/${userId}`);
+  // Toggle user active status (Admin only)
+  toggleUser: async (userId) => {
+    const response = await api.patch(`/admin/users/${userId}/toggle`);
+    return response.data;
   },
 };
 

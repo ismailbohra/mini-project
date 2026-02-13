@@ -21,6 +21,7 @@ import Users from './pages/Users';
 import Review from './pages/Review';
 import Notifications from './pages/Notifications';
 import Forbidden from './pages/Forbidden';
+import RoleChanged from './pages/RoleChanged';
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forbidden" element={<Forbidden />} />
+          <Route path="/role-changed" element={<RoleChanged />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

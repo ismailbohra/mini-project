@@ -1,0 +1,125 @@
+/* Additional styling for integrated mention components */
+
+/* Style for mention text area in forms */
+.mention-textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.mention-textarea:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.mention-textarea::placeholder {
+  color: #6c757d;
+  opacity: 0.7;
+}
+
+/* Small size variant for comments */
+.mention-textarea.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+/* Spacing for mention textarea container */
+.mention-textarea-container {
+  margin-bottom: 0.75rem;
+}
+
+/* Preview badges for mentioned usernames */
+.mentioned-usernames-preview {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+  border: 1px solid #e9ecef;
+}
+
+.preview-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-right: 0.5rem;
+}
+
+.preview-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.username-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  color: #fff;
+  background-color: #0d6efd;
+  border-radius: 0.375rem;
+  text-decoration: none;
+}
+
+/* Adjust mention suggestions position for Bootstrap forms */
+.mention-input-container {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+/* Spacing adjustment for mentioned users list in posts/comments */
+.mentioned-users {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Integration with Bootstrap card components */
+.card-body .mention-textarea-container {
+  margin-bottom: 1rem;
+}
+
+.card-body .mentioned-users {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .mention-suggestions {
+    max-width: calc(100vw - 2rem);
+  }
+  
+  .mentioned-users-list {
+    max-width: 100%;
+  }
+}
+
+/* Dark mode adjustments for Bootstrap dark theme */
+[data-bs-theme="dark"] .mention-textarea {
+  background-color: #212529;
+  border-color: #495057;
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .mention-textarea:focus {
+  background-color: #212529;
+  border-color: #86b7fe;
+  color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .mentioned-usernames-preview {
+  background-color: #212529;
+  border-color: #495057;
+}
+
+[data-bs-theme="dark"] .preview-label {
+  color: #adb5bd;
+}

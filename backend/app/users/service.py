@@ -3,7 +3,7 @@ from typing import List, Optional
 from app.config.security import get_password_hash
 from app.users.interface import UserRepositoryInterface
 from app.users.model import User
-from app.users.schema import UserCreate, UserUpdate
+from app.users.schema import UserCreate, UserMentionResponse, UserUpdate
 from app.utils.exceptions import UserAlreadyExistsException, UserNotFoundException
 from app.utils.logging import get_logger
 
@@ -107,4 +107,29 @@ class UserService:
             raise
         except Exception as e:
             logger.exception(f"Error deleting user {user_id}: {e}")
+            raise
+
+    async def search_users_for_mentions(
+        self, search_term: str, limit: int = 10
+    ) -> List[UserMentionResponse]:
+        """
+        Search users by username for mention autocomplete.
+
+        Args:
+            search_term: The search query (partial username)
+            limit: Maximum number of results to return
+
+        Returns:
+            List of UserMentionResponse with id, username, and profile_image
+        """
+        try:
+            users = await self.repository.search_by_username(search_term, limit)
+            return [
+                UserMentionResponse(
+                    id=user.id, username=user.username, profile_image=user.profile_image
+                )
+                for user in users
+            ]
+        except Exception as e:
+            logger.exception(f"Error searching users for mentions: {e}")
             raise

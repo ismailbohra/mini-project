@@ -496,6 +496,112 @@ async def on_post_updated(payload: dict):
         logger.exception(f"Error handling post.updated event: {e}")
 
 
+async def on_post_user_mentioned(payload: dict):
+    """Handle post mention notifications."""
+    try:
+        post_id = payload.get("post_id")
+        mentioned_user_id = payload.get("mentioned_user_id")
+        actor_id = payload.get("actor_id")
+        actor_username = payload.get("actor_username")
+        mentioned_username = payload.get("mentioned_username")
+
+        logger.debug(
+            f"Post mention - post_id: {post_id}, mentioned: {mentioned_username} (ID: {mentioned_user_id}), "
+            f"actor: {actor_username} (ID: {actor_id})"
+        )
+
+        # Don't send notification if user mentioned themselves (shouldn't happen, but safe check)
+        if actor_id == mentioned_user_id:
+            logger.debug("Skipping notification - user mentioned themselves")
+            return
+
+        async with AsyncSessionLocal() as session:
+            repo = NotificationRepository(session)
+            notification = await repo.create_notification(
+                receiver_id=mentioned_user_id,
+                actor_id=actor_id,
+                type="post_user_mentioned",
+                post_id=post_id,
+            )
+            logger.debug(f"Mention notification created: {notification.id}")
+
+            # Send WebSocket notification
+            await ws_manager.send_to_user(
+                mentioned_user_id,
+                {
+                    "type": "notification",
+                    "notification": {
+                        "id": notification.id,
+                        "receiver_id": notification.receiver_id,
+                        "actor_id": notification.actor_id,
+                        "actor_username": actor_username,
+                        "type": notification.type,
+                        "post_id": notification.post_id,
+                        "comment_id": notification.comment_id,
+                        "is_read": notification.is_read,
+                        "created_at": notification.created_at.isoformat(),
+                    },
+                },
+            )
+            logger.debug(f"Websocket notification sent to user {mentioned_user_id}")
+    except Exception as e:
+        logger.exception(f"Failed to handle post mention event: {e}")
+
+
+async def on_comment_user_mentioned(payload: dict):
+    """Handle comment mention notifications."""
+    try:
+        post_id = payload.get("post_id")
+        comment_id = payload.get("comment_id")
+        mentioned_user_id = payload.get("mentioned_user_id")
+        actor_id = payload.get("actor_id")
+        actor_username = payload.get("actor_username")
+        mentioned_username = payload.get("mentioned_username")
+
+        logger.debug(
+            f"Comment mention - post_id: {post_id}, comment_id: {comment_id}, "
+            f"mentioned: {mentioned_username} (ID: {mentioned_user_id}), actor: {actor_username} (ID: {actor_id})"
+        )
+
+        # Don't send notification if user mentioned themselves (shouldn't happen, but safe check)
+        if actor_id == mentioned_user_id:
+            logger.debug("Skipping notification - user mentioned themselves")
+            return
+
+        async with AsyncSessionLocal() as session:
+            repo = NotificationRepository(session)
+            notification = await repo.create_notification(
+                receiver_id=mentioned_user_id,
+                actor_id=actor_id,
+                type="comment_user_mentioned",
+                post_id=post_id,
+                comment_id=comment_id,
+            )
+            logger.debug(f"Mention notification created: {notification.id}")
+
+            # Send WebSocket notification
+            await ws_manager.send_to_user(
+                mentioned_user_id,
+                {
+                    "type": "notification",
+                    "notification": {
+                        "id": notification.id,
+                        "receiver_id": notification.receiver_id,
+                        "actor_id": notification.actor_id,
+                        "actor_username": actor_username,
+                        "type": notification.type,
+                        "post_id": notification.post_id,
+                        "comment_id": notification.comment_id,
+                        "is_read": notification.is_read,
+                        "created_at": notification.created_at.isoformat(),
+                    },
+                },
+            )
+            logger.debug(f"Websocket notification sent to user {mentioned_user_id}")
+    except Exception as e:
+        logger.exception(f"Failed to handle comment mention event: {e}")
+
+
 async def register_subscribers():
     if not event_bus_module.event_bus:
         logger.error("Event bus is not initialized, cannot register subscribers")
@@ -528,6 +634,17 @@ async def register_subscribers():
     await event_bus_module.event_bus.subscribe("post.new_post_added", on_post_added)
 
     logger.debug("Registered: post.updated")
+
+    await event_bus_module.event_bus.subscribe(
+        "post.user_mentioned", on_post_user_mentioned
+    )
+    logger.debug("Registered: post.user_mentioned")
+
+    await event_bus_module.event_bus.subscribe(
+        "comment.user_mentioned", on_comment_user_mentioned
+    )
+    logger.debug("Registered: comment.user_mentioned")
+
     logger.info(
         f"All subscribers registered. Total handlers: {len(event_bus_module.event_bus.handlers)}"
     )

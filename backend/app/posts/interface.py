@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.posts.model import PostLike, PostReport, Posts, Tags
+from app.posts.model import PostLike, PostMention, PostReport, Posts, Tags
 
 
 class PostRepositoryInterface(ABC):
@@ -129,4 +129,19 @@ class PostRepositoryInterface(ABC):
     @abstractmethod
     async def search_suggestions(self, search: str, limit: int = 10) -> List[dict]:
         """Get search suggestions based on partial match."""
+        pass
+
+    @abstractmethod
+    async def add_mentions_to_post(self, post_id: int, user_ids: List[int]) -> None:
+        """Add mentions to a post."""
+        pass
+
+    @abstractmethod
+    async def remove_mentions_from_post(self, post_id: int) -> None:
+        """Remove all mentions from a post."""
+        pass
+
+    @abstractmethod
+    async def get_post_mentions(self, post_id: int) -> List[PostMention]:
+        """Get all mentions for a post."""
         pass

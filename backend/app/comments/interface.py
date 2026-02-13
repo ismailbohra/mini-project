@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.comments.model import Comment, CommentLike, CommentReport
+from app.comments.model import Comment, CommentLike, CommentMention, CommentReport
 
 
 class CommentRepositoryInterface(ABC):
@@ -100,4 +100,21 @@ class CommentRepositoryInterface(ABC):
         self, report: CommentReport, status: str
     ) -> CommentReport:
         """Update report status."""
+        pass
+
+    @abstractmethod
+    async def add_mentions_to_comment(
+        self, post_id: int, comment_id: int, user_ids: List[int]
+    ) -> None:
+        """Add mentions to a comment."""
+        pass
+
+    @abstractmethod
+    async def remove_mentions_from_comment(self, comment_id: int) -> None:
+        """Remove all mentions from a comment."""
+        pass
+
+    @abstractmethod
+    async def get_comment_mentions(self, comment_id: int) -> List[CommentMention]:
+        """Get all mentions for a comment."""
         pass

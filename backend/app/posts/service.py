@@ -6,6 +6,7 @@ import app.utils.redis as redis_utils
 from app.posts.interface import PostRepositoryInterface
 from app.posts.model import Posts
 from app.posts.schema import (
+    MentionedUserResponse,
     PostCreate,
     PostLikeResponse,
     PostListResponse,
@@ -16,6 +17,7 @@ from app.posts.schema import (
 )
 from app.utils.exceptions import ForbiddenException, NotFoundException
 from app.utils.logging import get_logger
+from app.utils.mentions import extract_mentions
 
 logger = get_logger(__name__)
 
@@ -33,7 +35,7 @@ class PostService:
         current_user_id: Optional[int] = None,
         image_path: Optional[str] = None,
     ) -> PostResponse:
-        """Create a new post with tags."""
+        """Create a new post with tags and handle mentions."""
         # Create the post
         post = await self.repository.create_post(
             author_id=author_id,
@@ -51,6 +53,9 @@ class PostService:
 
             # Add tags to post
             await self.repository.add_tags_to_post(post, tags)
+
+        # Handle mentions
+        await self._process_mentions(post.id, post_data.description, author_id)
 
         # Fetch the post with tags to return
         post_with_tags = await self.repository.get_post_by_id(post.id)
@@ -162,6 +167,12 @@ class PostService:
                     tags.append(tag)
                 await self.repository.add_tags_to_post(post, tags)
 
+        # Handle mentions when description is being updated
+        if post_data.description is not None:
+            # Remove existing mentions and add new ones
+            await self.repository.remove_mentions_from_post(post_id)
+            await self._process_mentions(post_id, post_data.description, author_id)
+
         # Fetch updated post with tags
         updated_post = await self.repository.get_post_by_id(post_id)
 
@@ -217,6 +228,17 @@ class PostService:
         # Extract tags from post_tags relationship
         tags = [TagResponse(id=pt.tag.id, name=pt.tag.name) for pt in post.tags]
 
+        # Extract mentioned users
+        mentions = await self.repository.get_post_mentions(post.id)
+        mentioned_users = [
+            MentionedUserResponse(
+                id=mention.user.id,
+                username=mention.user.username,
+                profile_image=mention.user.profile_image,
+            )
+            for mention in mentions
+        ]
+
         # Build author object
         author = post.author
         author_obj = None
@@ -244,6 +266,7 @@ class PostService:
             title=post.title,
             description=post.description,
             tags=tags,
+            mentioned_users=mentioned_users,
             created_at=post.created_at,
             updated_at=post.updated_at,
             likes_count=likes_count,
@@ -358,3 +381,51 @@ class PostService:
         if not search or len(search) < 2:
             return []
         return await self.repository.search_suggestions(search, limit)
+
+    async def _process_mentions(
+        self, post_id: int, content: str, author_id: int
+    ) -> None:
+        """
+        Process mentions in post content.
+
+        Extracts usernames, validates them, stores mentions, and sends notifications.
+        """
+        # Extract unique mentions from content
+        usernames = extract_mentions(content)
+
+        if not usernames:
+            return
+
+        # Get valid users from usernames
+        from app.config.database import AsyncSessionLocal
+        from app.users.repository import UserRepository
+
+        async with AsyncSessionLocal() as session:
+            user_repo = UserRepository(session)
+            users = await user_repo.get_by_usernames(usernames)
+
+            # Get actor user for username
+            actor = await user_repo.get_by_id(author_id)
+            actor_username = actor.username if actor else None
+
+            # Filter out the author (don't mention yourself)
+            valid_users = [user for user in users if user.id != author_id]
+
+            if valid_users:
+                # Add mentions to post
+                user_ids = [user.id for user in valid_users]
+                await self.repository.add_mentions_to_post(post_id, user_ids)
+
+                # Send notifications for each mentioned user
+                if event_bus_module.event_bus and actor_username:
+                    for user in valid_users:
+                        await event_bus_module.event_bus.publish(
+                            "post.user_mentioned",
+                            {
+                                "post_id": post_id,
+                                "mentioned_user_id": user.id,
+                                "mentioned_username": user.username,
+                                "actor_id": author_id,
+                                "actor_username": actor_username,
+                            },
+                        )

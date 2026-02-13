@@ -11,9 +11,11 @@ from app.comments.schema import (
     CommentReportResponse,
     CommentResponse,
     CommentUpdate,
+    MentionedUserResponse,
 )
 from app.utils.exceptions import ForbiddenException, NotFoundException
 from app.utils.logging import get_logger
+from app.utils.mentions import extract_mentions
 
 logger = get_logger(__name__)
 
@@ -50,6 +52,11 @@ class CommentService:
             title=comment_data.title,
             description=comment_data.description,
             parent_comment_id=comment_data.parent_comment_id,
+        )
+
+        # Handle mentions
+        await self._process_mentions(
+            comment_data.post_id, comment.id, comment_data.description, author_id
         )
 
         # The repository now returns the comment with the `author` relationship loaded
@@ -161,6 +168,14 @@ class CommentService:
         comment = await self.repository.update_comment(
             comment, title=comment_data.title, description=comment_data.description
         )
+
+        # Handle mentions when description is being updated
+        if comment_data.description is not None:
+            # Remove existing mentions and add new ones
+            await self.repository.remove_mentions_from_comment(comment_id)
+            await self._process_mentions(
+                comment.post_id, comment_id, comment_data.description, author_id
+            )
 
         await redis_utils.delete_cache(f"post:{comment.post_id}")
         await redis_utils.delete_cache(f"comments:post:{comment.post_id}")
@@ -324,6 +339,17 @@ class CommentService:
             like = await self.repository.get_comment_like(current_user_id, comment.id)
             user_has_liked = like is not None
 
+        # Get mentioned users
+        mentions = await self.repository.get_comment_mentions(comment.id)
+        mentioned_users = [
+            MentionedUserResponse(
+                id=mention.user.id,
+                username=mention.user.username,
+                profile_image=mention.user.profile_image,
+            )
+            for mention in mentions
+        ]
+
         # Get replies recursively
         replies = await self.repository.get_replies(comment.id)
         reply_responses = [
@@ -348,9 +374,61 @@ class CommentService:
             title=comment.title,
             description=comment.description,
             parent_comment_id=comment.parent_comment_id,
+            mentioned_users=mentioned_users,
             created_at=comment.created_at,
             updated_at=comment.updated_at,
             likes_count=likes_count,
             user_has_liked=user_has_liked,
             replies=reply_responses,
         )
+
+    async def _process_mentions(
+        self, post_id: int, comment_id: int, content: str, author_id: int
+    ) -> None:
+        """
+        Process mentions in comment content.
+
+        Extracts usernames, validates them, stores mentions, and sends notifications.
+        """
+        # Extract unique mentions from content
+        usernames = extract_mentions(content)
+
+        if not usernames:
+            return
+
+        # Get valid users from usernames
+        from app.config.database import AsyncSessionLocal
+        from app.users.repository import UserRepository
+
+        async with AsyncSessionLocal() as session:
+            user_repo = UserRepository(session)
+            users = await user_repo.get_by_usernames(usernames)
+
+            # Get actor user for username
+            actor = await user_repo.get_by_id(author_id)
+            actor_username = actor.username if actor else None
+
+            # Filter out the author (don't mention yourself)
+            valid_users = [user for user in users if user.id != author_id]
+
+            if valid_users:
+                # Add mentions to comment
+                user_ids = [user.id for user in valid_users]
+                await self.repository.add_mentions_to_comment(
+                    post_id, comment_id, user_ids
+                )
+
+                # Send notifications for each mentioned user
+                if event_bus_module.event_bus and actor_username:
+                    for user in valid_users:
+                        await event_bus_module.event_bus.publish(
+                            "comment.user_mentioned",
+                            {
+                                "post_id": post_id,
+                                "comment_id": comment_id,
+                                "mentioned_user_id": user.id,
+                                "mentioned_username": user.username,
+                                "actor_id": author_id,
+                                "actor_username": actor_username,
+                            },
+                        )

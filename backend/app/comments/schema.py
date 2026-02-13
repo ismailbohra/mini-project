@@ -15,6 +15,16 @@ class AuthorResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MentionedUserResponse(BaseModel):
+    """Response schema for mentioned users in comments."""
+
+    id: int
+    username: str
+    profile_image: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class CommentCreate(BaseModel):
     post_id: int
     title: str = Field(..., min_length=1, max_length=200)
@@ -35,6 +45,7 @@ class CommentResponse(BaseModel):
     title: str
     description: str
     parent_comment_id: Optional[int]
+    mentioned_users: List[MentionedUserResponse] = []
     created_at: datetime
     updated_at: datetime
     likes_count: int = 0

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import postService from '../services/postService';
+import MentionTextArea from '../components/MentionTextArea';
+import '../components/MentionStyles.css';
+import '../components/MentionIntegration.css';
 
 const CreatePost = () => {
   const navigate = useNavigate();
@@ -37,6 +40,13 @@ const CreatePost = () => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleDescriptionChange = (value) => {
+    setFormData({
+      ...formData,
+      description: value,
     });
   };
 
@@ -158,18 +168,14 @@ const CreatePost = () => {
                   <label htmlFor="description" className="form-label fw-bold">
                     Content <span className="text-danger">*</span>
                   </label>
-                  <textarea
-                    className="form-control"
-                    id="description"
-                    name="description"
-                    rows="10"
+                  <MentionTextArea
                     value={formData.description}
-                    onChange={handleChange}
-                    required
-                    placeholder="Write your post content here... Use #tagname to mention tags"
-                  ></textarea>
+                    onChange={handleDescriptionChange}
+                    placeholder="Write your post content here... Use @ to mention users and #tagname for tags"
+                    rows={10}
+                  />
                   <small className="text-muted">
-                    Use #tagname to mention tags (e.g., #AI, #React, #JavaScript)
+                    Use @ to mention users and #tagname to mention tags (e.g., #AI, #React, #JavaScript)
                   </small>
                 </div>
 

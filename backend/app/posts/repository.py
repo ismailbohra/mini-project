@@ -2,7 +2,15 @@
 from typing import List, Optional
 
 from app.posts.interface import PostRepositoryInterface
-from app.posts.model import PostLike, PostReport, Posts, PostTag, ReportStatus, Tags
+from app.posts.model import (
+    PostLike,
+    PostMention,
+    PostReport,
+    Posts,
+    PostTag,
+    ReportStatus,
+    Tags,
+)
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -379,3 +387,34 @@ class PostRepository(PostRepositoryInterface):
             suggestions.append({"type": "tag", "value": tag_name})
 
         return suggestions[:limit]
+
+    async def add_mentions_to_post(self, post_id: int, user_ids: List[int]) -> None:
+        """Add mentions to a post."""
+        for user_id in user_ids:
+            # Check if mention already exists
+            existing = await self.session.execute(
+                select(PostMention).where(
+                    PostMention.post_id == post_id, PostMention.user_id == user_id
+                )
+            )
+            if not existing.scalar_one_or_none():
+                mention = PostMention(post_id=post_id, user_id=user_id)
+                self.session.add(mention)
+        await self.session.commit()
+
+    async def remove_mentions_from_post(self, post_id: int) -> None:
+        """Remove all mentions from a post."""
+        await self.session.execute(
+            delete(PostMention).where(PostMention.post_id == post_id)
+        )
+        await self.session.commit()
+
+    async def get_post_mentions(self, post_id: int) -> List[PostMention]:
+        """Get all mentions for a post."""
+        query = (
+            select(PostMention)
+            .where(PostMention.post_id == post_id)
+            .options(selectinload(PostMention.user))
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())

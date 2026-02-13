@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 from app.comments.interface import CommentRepositoryInterface
-from app.comments.model import Comment, CommentLike, CommentReport
+from app.comments.model import Comment, CommentLike, CommentMention, CommentReport
 from app.posts.model import ReportStatus
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -197,3 +197,39 @@ class CommentRepository(CommentRepositoryInterface):
         await self.session.commit()
         await self.session.refresh(report)
         return report
+
+    async def add_mentions_to_comment(
+        self, post_id: int, comment_id: int, user_ids: List[int]
+    ) -> None:
+        """Add mentions to a comment."""
+        for user_id in user_ids:
+            # Check if mention already exists
+            existing = await self.session.execute(
+                select(CommentMention).where(
+                    CommentMention.comment_id == comment_id,
+                    CommentMention.user_id == user_id,
+                )
+            )
+            if not existing.scalar_one_or_none():
+                mention = CommentMention(
+                    post_id=post_id, comment_id=comment_id, user_id=user_id
+                )
+                self.session.add(mention)
+        await self.session.commit()
+
+    async def remove_mentions_from_comment(self, comment_id: int) -> None:
+        """Remove all mentions from a comment."""
+        await self.session.execute(
+            delete(CommentMention).where(CommentMention.comment_id == comment_id)
+        )
+        await self.session.commit()
+
+    async def get_comment_mentions(self, comment_id: int) -> List[CommentMention]:
+        """Get all mentions for a comment."""
+        query = (
+            select(CommentMention)
+            .where(CommentMention.comment_id == comment_id)
+            .options(selectinload(CommentMention.user))
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())

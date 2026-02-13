@@ -31,6 +31,9 @@ class Comment(Base):
     parent = relationship("Comment", remote_side=[id], back_populates="replies")
     replies = relationship("Comment", back_populates="parent")
     likes = relationship("CommentLike", back_populates="comment")
+    mentions = relationship(
+        "CommentMention", back_populates="comment", cascade="all, delete-orphan"
+    )
 
 
 class CommentLike(Base):
@@ -67,3 +70,22 @@ class CommentReport(Base):
 
     user = relationship("User")
     comment = relationship("Comment")
+
+
+class CommentMention(Base):
+    __tablename__ = "comment_mentions"
+
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    comment_id: Mapped[int] = mapped_column(
+        ForeignKey("comments.id"), primary_key=True, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), primary_key=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    comment = relationship("Comment", back_populates="mentions")
+    user = relationship("User", back_populates="comment_mentions")
+    post = relationship("Posts")

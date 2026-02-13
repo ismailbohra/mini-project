@@ -132,6 +132,10 @@ const Header = ({ toggleSidebar }) => {
         return `${actorName} liked your post`;
       case 'comment_liked':
         return `${actorName} liked your comment`;
+      case 'post_user_mentioned':
+        return `@${actorName} mentioned you in a post`;
+      case 'comment_user_mentioned':
+        return `@${actorName} mentioned you in a comment`;
       default:
         return 'New notification';
     }
@@ -235,7 +239,13 @@ const Header = ({ toggleSidebar }) => {
                       style={{ cursor: 'pointer', whiteSpace: 'normal' }}
                     >
                       <div className="d-flex align-items-start">
-                        <i className={`bi ${notif.type && notif.type.includes('comment') ? 'bi-chat-dots' : 'bi-heart'} me-2 mt-1`}></i>
+                        <i className={`bi ${
+                          notif.type && notif.type.includes('mentioned') 
+                            ? 'bi-at text-warning' 
+                            : notif.type && notif.type.includes('comment') 
+                            ? 'bi-chat-dots' 
+                            : 'bi-heart'
+                        } me-2 mt-1`}></i>
                         <div className="flex-grow-1">
                           <div className="fw-bold small">{getNotificationMessage(notif)}</div>
                           <small className="text-muted">

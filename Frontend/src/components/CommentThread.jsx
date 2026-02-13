@@ -3,6 +3,10 @@ import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import commentService from '../services/commentService';
+import MentionTextArea from './MentionTextArea';
+import { MentionedUsersList } from './MentionComponents';
+import './MentionStyles.css';
+import './MentionIntegration.css';
 
 const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
   const { user } = useSelector((state) => state.auth);
@@ -154,12 +158,13 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
 
           {isEditing ? (
             <form onSubmit={handleEdit}>
-              <textarea
-                className="form-control form-control-sm mb-2"
+              <MentionTextArea
                 value={editContent.description}
-                onChange={(e) => setEditContent({ ...editContent, description: e.target.value })}
-                rows="2"
-              ></textarea>
+                onChange={(value) => setEditContent({ ...editContent, description: value })}
+                placeholder="Edit your comment... Use @ to mention users"
+                className="form-control-sm"
+                rows={3}
+              />
               <button type="submit" className="btn btn-sm btn-primary me-2">
                 Save
               </button>
@@ -169,7 +174,10 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
             </form>
           ) : (
             <>
-              <p className="mb-2">{comment.description}</p>
+              <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>{comment.description}</p>
+              {comment.mentioned_users && comment.mentioned_users.length > 0 && (
+                <MentionedUsersList mentions={comment.mentioned_users} />
+              )}
               <div className="d-flex gap-3">
                 <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={handleLike}>
                   <i className={`bi ${comment.user_has_liked ? 'bi-heart-fill text-danger' : 'bi-heart'} me-1`}></i>
@@ -188,13 +196,13 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
 
           {showReplyForm && (
             <form onSubmit={handleReply} className="mt-2">
-              <textarea
-                className="form-control form-control-sm mb-2"
-                placeholder="Write a reply..."
+              <MentionTextArea
                 value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                rows="2"
-              ></textarea>
+                onChange={setReplyContent}
+                placeholder="Write a reply... Use @ to mention users"
+                className="form-control-sm"
+                rows={3}
+              />
               <button type="submit" className="btn btn-sm btn-primary me-2">
                 Post Reply
               </button>

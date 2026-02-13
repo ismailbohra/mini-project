@@ -47,3 +47,27 @@ class UserRepository(UserRepositoryInterface):
     async def delete(self, user: User) -> None:
         await self.session.delete(user)
         await self.session.commit()
+
+    async def search_by_username(self, search_term: str, limit: int = 10) -> List[User]:
+        """Search users by username pattern for mention autocomplete."""
+        query = (
+            select(User)
+            .where(User.username.ilike(f"%{search_term}%"))
+            .where(User.is_active == True)
+            .where(User.is_deleted == False)
+            .limit(limit)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_by_usernames(self, usernames: List[str]) -> List[User]:
+        """Get users by a list of usernames."""
+        # Use case-insensitive comparison
+        query = (
+            select(User)
+            .where(User.username.in_(usernames))
+            .where(User.is_active == True)
+            .where(User.is_deleted == False)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()

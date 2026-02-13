@@ -79,13 +79,19 @@ const Notifications = () => {
         return `${actorName} liked your post`;
       case 'comment_liked':
         return `${actorName} liked your comment`;
+      case 'post_user_mentioned':
+        return `@${actorName} mentioned you in a post`;
+      case 'comment_user_mentioned':
+        return `@${actorName} mentioned you in a comment`;
       default:
         return 'New notification';
     }
   };
 
   const getNotificationIcon = (type) => {
-    if (type && type.includes('comment')) {
+    if (type && type.includes('mentioned')) {
+      return 'bi-at text-warning';
+    } else if (type && type.includes('comment')) {
       return 'bi-chat-dots text-info';
     } else if (type && type.includes('liked')) {
       return 'bi-heart-fill text-danger';

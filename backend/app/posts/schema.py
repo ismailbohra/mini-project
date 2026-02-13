@@ -23,6 +23,16 @@ class TagResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MentionedUserResponse(BaseModel):
+    """Response schema for mentioned users."""
+
+    id: int
+    username: str
+    profile_image: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class PostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1)
@@ -42,6 +52,7 @@ class PostResponse(BaseModel):
     title: str
     description: str
     tags: List[TagResponse]
+    mentioned_users: List[MentionedUserResponse] = []
     created_at: datetime
     updated_at: datetime
     likes_count: int = 0

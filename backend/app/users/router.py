@@ -1,9 +1,11 @@
+from typing import List
+
 from app.auth.dependency import get_current_user_id
 from app.users.dependency import get_user_service
-from app.users.schema import UserCreate, UserResponse, UserUpdate
+from app.users.schema import UserCreate, UserMentionResponse, UserResponse, UserUpdate
 from app.users.service import UserService
 from app.utils.upload import save_upload_file
-from fastapi import APIRouter, Depends, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from pydantic import EmailStr
 
 router = APIRouter(prefix="/users", tags=["User"])
@@ -44,6 +46,26 @@ async def create_user(
         image_path = save_upload_file(profile_image, subdir="users")
     user_create = UserCreate(username=username, email=email, password=password)
     return await service.create_user(user_create, profile_image=image_path)
+
+
+@router.get("/search/mentions", response_model=List[UserMentionResponse])
+async def search_users_for_mentions(
+    q: str = Query(..., min_length=1, description="Search query for username"),
+    limit: int = Query(10, ge=1, le=20),
+    service: UserService = Depends(get_user_service),
+    user_id: int = Depends(get_current_user_id),
+):
+    """
+    Search users by username for @mention autocomplete.
+
+    Returns a list of users matching the search query with:
+    - User ID
+    - Username
+    - Profile image
+
+    Used for mention suggestions when typing @username in posts/comments.
+    """
+    return await service.search_users_for_mentions(q, limit)
 
 
 @router.get("/{user_id}", response_model=UserResponse)

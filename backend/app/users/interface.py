@@ -32,3 +32,11 @@ class UserRepositoryInterface(ABC):
     @abstractmethod
     async def delete(self, user: User) -> None:
         pass
+
+    @abstractmethod
+    async def search_by_username(self, search_term: str, limit: int = 10) -> List[User]:
+        pass
+
+    @abstractmethod
+    async def get_by_usernames(self, usernames: List[str]) -> List[User]:
+        pass

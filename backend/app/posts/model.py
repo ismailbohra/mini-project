@@ -35,6 +35,9 @@ class Posts(Base):
     comments = relationship("Comment", back_populates="post")
     likes = relationship("PostLike", back_populates="post")
     tags = relationship("PostTag", back_populates="post")
+    mentions = relationship(
+        "PostMention", back_populates="post", cascade="all, delete-orphan"
+    )
 
 
 class Tags(Base):
@@ -90,3 +93,20 @@ class PostReport(Base):
 
     user = relationship("User")
     post = relationship("Posts")
+
+
+class PostMention(Base):
+    __tablename__ = "post_mentions"
+
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("posts.id"), primary_key=True, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), primary_key=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    post = relationship("Posts", back_populates="mentions")
+    user = relationship("User", back_populates="post_mentions")

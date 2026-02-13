@@ -4,6 +4,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import CommentThread from '../components/CommentThread';
+import MentionTextArea from '../components/MentionTextArea';
+import { MentionedUsersList } from '../components/MentionComponents';
+import '../components/MentionStyles.css';
+import '../components/MentionIntegration.css';
 import { setCurrentPost, updatePost } from '../store/slices/postSlice';
 import { setComments } from '../store/slices/commentSlice';
 import postService from '../services/postService';
@@ -275,16 +279,14 @@ const PostDetail = () => {
                 <small className="text-muted">Maximum file size: 10MB</small>
               </div>
               <div className="mb-3">
-                <textarea
-                  className="form-control"
-                  rows="8"
+                <MentionTextArea
                   value={editData.description}
-                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                  required
-                  placeholder="Write your post content... Use #tagname to mention tags"
-                ></textarea>
+                  onChange={(value) => setEditData({ ...editData, description: value })}
+                  placeholder="Write your post content... Use @ to mention users and #tagname for tags"
+                  rows={8}
+                />
                 <small className="text-muted">
-                  Use #tagname to mention tags (e.g., #AI, #React, #JavaScript)
+                  Use @ to mention users and #tagname to mention tags (e.g., #AI, #React, #JavaScript)
                 </small>
               </div>
               {detectedTags.length > 0 && (
@@ -380,6 +382,10 @@ const PostDetail = () => {
                 {currentPost.description}
               </div>
 
+              {currentPost.mentioned_users && currentPost.mentioned_users.length > 0 && (
+                <MentionedUsersList mentions={currentPost.mentioned_users} />
+              )}
+
               <div className="d-flex gap-3">
                 <button className="btn btn-sm btn-outline-primary" onClick={handleLike}>
                   <i className={`bi ${currentPost.user_has_liked ? 'bi-heart-fill' : 'bi-heart'} me-1`}></i>
@@ -400,13 +406,12 @@ const PostDetail = () => {
         <div className="card-body">
           <h5 className="mb-3">Add a Comment</h5>
           <form onSubmit={handleAddComment}>
-            <textarea
-              className="form-control mb-2"
-              placeholder="Write your comment..."
+            <MentionTextArea
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows="3"
-            ></textarea>
+              onChange={setNewComment}
+              placeholder="Write your comment... Use @ to mention users"
+              rows={3}
+            />
             <button type="submit" className="btn btn-primary">
               <i className="bi bi-send me-2"></i>
               Post Comment

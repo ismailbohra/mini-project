@@ -26,6 +26,12 @@ export const useNotificationToast = () => {
           case 'comment_liked':
             message = `${actorName} liked your comment`;
             break;
+          case 'post_user_mentioned':
+            message = `@${actorName} mentioned you in a post`;
+            break;
+          case 'comment_user_mentioned':
+            message = `@${actorName} mentioned you in a comment`;
+            break;
           default:
             message = 'New notification';
         }

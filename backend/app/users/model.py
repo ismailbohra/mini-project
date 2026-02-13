@@ -28,3 +28,5 @@ class User(Base):
     comments = relationship("Comment", back_populates="author")
     post_likes = relationship("PostLike", back_populates="user")
     comment_likes = relationship("CommentLike", back_populates="user")
+    post_mentions = relationship("PostMention", back_populates="user")
+    comment_mentions = relationship("CommentMention", back_populates="user")

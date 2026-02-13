@@ -20,18 +20,8 @@ logger = get_logger(__name__)
 class RoleVerificationMiddleware(BaseHTTPMiddleware):
     """
     Middleware to verify that a user's role in their JWT token matches their current role in the database.
-
-    If the role has been modified (e.g., by an admin), the user will be forced to re-login
-    to get a new token with the updated role.
-
-    This middleware:
-    1. Extracts the JWT token from the Authorization header
-    2. Decodes the token and retrieves the role claim
-    3. Fetches the current role from the database/cache
-    4. Compares both roles and rejects the request if they don't match
     """
 
-    # Paths that don't require role verification
     EXCLUDED_PATHS = [
         "/docs",
         "/redoc",
@@ -44,97 +34,102 @@ class RoleVerificationMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Response]
     ) -> Response:
-        """Process the request and verify role if token is present."""
 
         # Skip role verification for excluded paths
         if any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS):
-            return await call_next(request)
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response
 
-        # Check if Authorization header is present
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            # No token, let the endpoint handle authentication
-            return await call_next(request)
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response
 
         try:
-            # Extract token
             token = auth_header.split(" ")[1]
-
-            # Decode token
             payload = decode_token(token)
-            if not payload:
-                # Invalid token, let the endpoint handle it
-                return await call_next(request)
 
-            # Get user ID and role from token
+            if not payload:
+                response = await call_next(request)
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response
+
             user_id = payload.get("sub")
             token_role = payload.get("role")
 
             if not user_id or not token_role:
-                # Token doesn't have required fields, let endpoint handle it
-                return await call_next(request)
+                response = await call_next(request)
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response
 
             try:
                 user_id_int = int(user_id)
             except ValueError:
-                return await call_next(request)
+                response = await call_next(request)
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response
 
-            # Get current role from cache/database
             current_role = await self._get_current_user_role(request, user_id_int)
 
-            # Compare roles
             if current_role and token_role != current_role:
                 logger.warning(
                     f"Role mismatch detected for user {user_id_int}. "
                     f"Token role: {token_role}, Current role: {current_role}"
                 )
-                response = JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={
-                        "success": False,
-                        "error": {
-                            "code": "ROLE_MODIFIED",
-                            "message": "Your role has been modified. Please login again to continue.",
-                        },
-                        "detail": "Your role has been modified. Please login again to continue.",
-                    },
-                )
-                # Add CORS headers manually since we're bypassing normal response flow
-                response.headers["Access-Control-Allow-Origin"] = "*"
-                response.headers["Access-Control-Allow-Credentials"] = "true"
-                response.headers["Access-Control-Allow-Methods"] = "*"
-                response.headers["Access-Control-Allow-Headers"] = "*"
-                return response
-
-            # Role matches or couldn't be verified, proceed with request
-            return await call_next(request)
-
-        except UnauthorizedException as e:
-            # Convert exception to JSON response instead of re-raising
-            logger.error(
-                f"Authentication error in middleware: {e.message if hasattr(e, 'message') else str(e)}"
-            )
-            response = JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={
+                # Return a structured JSON error matching the app's standard
+                payload = {
                     "success": False,
                     "error": {
-                        "code": "UNAUTHORIZED",
-                        "message": str(e.message) if hasattr(e, "message") else str(e),
+                        "code": "ROLE_MODIFIED",
+                        "message": "Your role has been modified. Please login again to continue.",
                     },
-                    "detail": str(e.message) if hasattr(e, "message") else str(e),
-                },
-            )
-            # Add CORS headers manually
+                    "data": None,
+                }
+                resp = JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED, content=payload
+                )
+                # Ensure CORS headers are present so browser can read the response
+                resp.headers["Access-Control-Allow-Origin"] = "*"
+                resp.headers["Access-Control-Allow-Credentials"] = "true"
+                resp.headers["Access-Control-Allow-Methods"] = (
+                    "GET,POST,PUT,DELETE,OPTIONS"
+                )
+                resp.headers["Access-Control-Allow-Headers"] = (
+                    "Authorization,Content-Type"
+                )
+                return resp
+
+            response = await call_next(request)
             response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "*"
-            response.headers["Access-Control-Allow-Headers"] = "*"
             return response
+
+        except UnauthorizedException as exc:
+            # Convert exception to the application's JSON error shape
+            message = getattr(exc, "message", str(exc))
+            payload = {
+                "success": False,
+                "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": message,
+                },
+                "data": None,
+            }
+            resp = JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED, content=payload
+            )
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+            resp.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type"
+            return resp
+
         except Exception as e:
-            # Log unexpected errors but don't block the request
             logger.error(f"Error in role verification middleware: {e}")
-            return await call_next(request)
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response
 
     async def _get_current_user_role(
         self, request: Request, user_id: int

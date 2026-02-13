@@ -40,6 +40,7 @@ class UserService:
             user_dict = {
                 "id": user.id,
                 "username": user.username,
+                "role": user.role.value,
                 "email": user.email,
                 "profile_image": user.profile_image,
                 "is_active": user.is_active,

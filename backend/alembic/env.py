@@ -31,7 +31,10 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL_SYNC)
+# Only set the database URL from settings if it hasn't been set already
+# This allows test fixtures to override the URL with SQLite
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL_SYNC)
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

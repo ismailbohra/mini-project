@@ -71,6 +71,7 @@ app = FastAPI(
     description="Backend API for Mini Project",
     version="1.0.0",
     lifespan=lifespan,
+    root_path="/api",
 )
 
 app.add_exception_handler(AppException, app_exception_handler)
@@ -97,7 +98,6 @@ app.include_router(comments_router)
 app.include_router(moderator_router)
 app.include_router(notifications_router)
 
-# Mount assets directory to serve static files (uploaded images)
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")

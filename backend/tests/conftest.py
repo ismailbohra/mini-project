@@ -78,14 +78,39 @@ def setup_test_database():
 
     yield
 
-    # Cleanup: remove test database
+    # Cleanup: dispose engines and remove test database file.
+    # Dispose the synchronous engine first.
     sync_engine.dispose()
-    if test_db_path.exists():
+
+    # Dispose the async test engine to close any open connections.
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(test_engine.dispose())
+    except RuntimeError:
+        # No running loop; create a temporary one to dispose the engine
+        new_loop = asyncio.new_event_loop()
+        try:
+            new_loop.run_until_complete(test_engine.dispose())
+        finally:
+            new_loop.close()
+    except Exception:
+        # If dispose fails for any reason, continue to unlink retry below
+        pass
+
+    # Retry unlink for a short period (Windows may keep file handles briefly).
+    import time
+
+    max_wait = 5.0
+    interval = 0.1
+    waited = 0.0
+    while test_db_path.exists() and waited < max_wait:
         try:
             test_db_path.unlink()
+            break
         except PermissionError:
-            # File may be in use by async connections, ignore
-            pass
+            time.sleep(interval)
+            waited += interval
+    # If still exists after retries, leave it (best-effort cleanup)
 
 
 @pytest.fixture
@@ -156,7 +181,7 @@ async def client(setup_test_database) -> AsyncGenerator[AsyncClient, None]:
     os.environ["REDIS_URL"] = "redis://localhost:6379/15"  # Use test Redis DB
 
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test/api"
     ) as ac:
         yield ac
 
@@ -176,7 +201,7 @@ def sync_client(setup_test_database) -> Generator[TestClient, None, None]:
     # Disable Redis caching for tests
     os.environ["REDIS_URL"] = "redis://localhost:6379/15"
 
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://test/api") as client:
         yield client
 
     app.dependency_overrides.clear()

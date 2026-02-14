@@ -8,11 +8,11 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
 
   useEffect(() => {
     loadUsers();
-  }, [currentPage]);
+  }, [currentPage, limit]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -59,6 +59,11 @@ const Users = () => {
     } catch (error) {
       toast.error(error.response?.data?.detail || `Failed to ${action} user`);
     }
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setLimit(newLimit);
+    setCurrentPage(1);
   };
 
   const formatDate = (dateString) => {
@@ -245,6 +250,8 @@ const Users = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              limit={limit}
+              onLimitChange={handleLimitChange}
             />
           </div>
         </>

@@ -2,6 +2,7 @@ import { store } from '../store';
 import { addNotification, setConnected } from '../store/slices/notificationSlice';
 import { updatePostLikesCount, updatePostCommentsCount, updateFullPost, deletePost, newPostAdded } from '../store/slices/postSlice';
 import { updateCommentLikesCount, deleteComment, addComment, addReply } from '../store/slices/commentSlice';
+import { toast } from 'react-toastify';
 
 class WebSocketManager {
   constructor() {
@@ -22,7 +23,8 @@ class WebSocketManager {
     this.userId = userId;
     this.isIntentionallyClosed = false;
     
-    const wsUrl = `ws://localhost:8000/notifications/ws`;
+    const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+    const wsUrl = `${WS_BASE_URL}/notifications/ws`;
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
@@ -41,6 +43,41 @@ class WebSocketManager {
         if (data.type === 'notification' && data.notification) {
           console.log('[WebSocket] Dispatching notification:', data.notification);
           store.dispatch(addNotification(data.notification));
+          
+          // Show toast for new websocket notification
+          const notification = data.notification;
+          if (!notification.is_read) {
+            const actorName = notification.actor_username || 'Someone';
+            let message = '';
+            
+            switch (notification.type) {
+              case 'comment_created':
+                message = `${actorName} commented on your post`;
+                break;
+              case 'comment_replied':
+                message = `${actorName} replied to your comment`;
+                break;
+              case 'post_liked':
+                message = `${actorName} liked your post`;
+                break;
+              case 'comment_liked':
+                message = `${actorName} liked your comment`;
+                break;
+              case 'post_user_mentioned':
+                message = `@${actorName} mentioned you in a post`;
+                break;
+              case 'comment_user_mentioned':
+                message = `@${actorName} mentioned you in a comment`;
+                break;
+              default:
+                message = 'New notification';
+            }
+
+            toast.info(message, {
+              position: 'top-right',
+              autoClose: 3000,
+            });
+          }
         } else if (data.type === 'post_updated' && data.data) {
           console.log('[WebSocket] Post updated:', data.data);
           const { post_id, likes_count, comments_count, user_has_liked } = data.data;

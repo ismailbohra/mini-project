@@ -1,11 +1,11 @@
 from typing import List
 
+import app.utils.redis as redis_utils
 from app.auth.dependency import get_current_user_id
 from app.users.dependency import get_user_service
 from app.users.schema import UserCreate, UserMentionResponse, UserResponse, UserUpdate
 from app.users.service import UserService
 from app.utils.upload import save_upload_file
-import app.utils.redis as redis_utils
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from pydantic import EmailStr
 
@@ -73,35 +73,11 @@ async def search_users_for_mentions(
         if response is not None:
             response.headers["X-Cache"] = "HIT"
         return [UserMentionResponse(**item) for item in cached]
-    
+
     if response is not None:
         response.headers["X-Cache"] = "MISS"
-    
+
     return await service.search_users_for_mentions(q, limit)
-
-
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: int, 
-    service: UserService = Depends(get_user_service),
-    response: Response = None,
-):
-    """
-    Get a user by ID
-    """
-    cache_key = f"user:profile:{user_id}"
-    cached = await redis_utils.get_cache(cache_key)
-    if cached:
-        if response is not None:
-            response.headers["X-Cache"] = "HIT"
-        from app.users.model import User
-        user = User(**cached)
-        return user
-    
-    if response is not None:
-        response.headers["X-Cache"] = "MISS"
-    
-    return await service.get_user(user_id)
 
 
 @router.put("/", response_model=UserResponse)
@@ -123,11 +99,3 @@ async def update_user(
         update_payload["password"] = password
     user_update = UserUpdate(**update_payload)
     return await service.update_user(user_id, user_update, profile_image=image_path)
-
-
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, service: UserService = Depends(get_user_service)):
-    """
-    Delete a user
-    """
-    await service.delete_user(user_id)

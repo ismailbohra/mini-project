@@ -3,11 +3,12 @@ import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
 export const useNotificationToast = () => {
-  const { notifications } = useSelector((state) => state.notifications);
+  const { notifications, initialLoadComplete } = useSelector((state) => state.notifications);
   const previousCountRef = useRef(notifications.length);
 
   useEffect(() => {
-    if (notifications.length > previousCountRef.current) {
+    // Only show toasts after initial load is complete (i.e., only for websocket notifications)
+    if (initialLoadComplete && notifications.length > previousCountRef.current) {
       const latestNotification = notifications[0];
       if (latestNotification && !latestNotification.is_read) {
         const actorName = latestNotification.actor_username || 'Someone';

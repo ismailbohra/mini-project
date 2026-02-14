@@ -111,12 +111,19 @@ class PostRepository(PostRepositoryInterface):
                 selectinload(Posts.tags).selectinload(PostTag.tag),
                 selectinload(Posts.author),
             )
-            .distinct()
         )
+
+        # Track if we need distinct (when joins are added)
+        needs_distinct = False
+        has_tag_join = False
+        has_author_join = False
 
         # Search functionality
         if search:
             search_term = f"%{search.lower()}%"
+            needs_distinct = True
+            has_tag_join = True
+            has_author_join = True
             # Apply search to count query
             count_query = (
                 count_query.outerjoin(Posts.author)
@@ -144,22 +151,29 @@ class PostRepository(PostRepositoryInterface):
 
         # Filter by tags
         if tags and len(tags) > 0:
-            # Apply tags filter to count query
-            count_query = count_query.join(Posts.tags).join(PostTag.tag)
+            needs_distinct = True
+            # Only add joins if not already added by search
+            if not has_tag_join:
+                count_query = count_query.join(Posts.tags).join(PostTag.tag)
+                query = query.join(Posts.tags).join(PostTag.tag)
+            # Apply tags filter
             count_query = count_query.where(Tags.name.in_(tags))
-            # Apply tags filter to posts query
-            query = query.join(Posts.tags).join(PostTag.tag)
             query = query.where(Tags.name.in_(tags))
 
         # Get total count
         count_result = await self.session.execute(count_query)
         total = count_result.scalar() or 0
 
-        # Sort
+        # Apply distinct if needed (when we have joins that could create duplicates)
+        if needs_distinct:
+            query = query.distinct()
+
+        # Sort - apply after distinct
+        sort_column = getattr(Posts, sort_by)
         if sort_order.lower() == "asc":
-            query = query.order_by(getattr(Posts, sort_by).asc())
+            query = query.order_by(sort_column.asc())
         else:
-            query = query.order_by(getattr(Posts, sort_by).desc())
+            query = query.order_by(sort_column.desc())
 
         # Apply pagination
         query = query.offset(skip).limit(limit)

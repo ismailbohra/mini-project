@@ -3,7 +3,15 @@ from typing import Optional
 
 from app.config.database import Base
 from app.posts.model import ReportStatus
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -38,6 +46,9 @@ class Comment(Base):
 
 class CommentLike(Base):
     __tablename__ = "comment_likes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "comment_id", name="unique_comment_like"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

@@ -8,14 +8,11 @@ import Sidebar from './Sidebar';
 import { wsManager } from '../services/websocketManager';
 import notificationService from '../services/notificationService';
 import { setNotifications, setUnreadCount, clearNotifications } from '../store/slices/notificationSlice';
-import { useNotificationToast } from '../hooks/useNotificationToast';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const dispatch = useDispatch();
   const { user, token, isAuthenticated } = useSelector((state) => state.auth);
-  
-  useNotificationToast();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

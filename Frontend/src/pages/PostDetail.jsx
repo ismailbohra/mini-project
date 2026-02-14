@@ -154,10 +154,10 @@ const PostDetail = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    
+
     // Extract tags from description
     const extractedTags = extractTagsFromDescription(editData.description);
-    
+
     try {
       await postService.updatePost(postId, {
         ...editData,
@@ -200,6 +200,11 @@ const PostDetail = () => {
   const canDelete = () => {
     if (!user || !currentPost) return false;
     return currentPost.author_id === user.id || user.role === 'Admin' || user.role === 'Moderator';
+  };
+
+  const canReport = () => {
+    if (!user || !currentPost) return false;
+    return currentPost.author_id !== user.id;
   };
 
   const formatDate = (dateString) => {
@@ -335,11 +340,13 @@ const PostDetail = () => {
                         </button>
                       </li>
                     )}
-                    <li>
-                      <button className="dropdown-item" onClick={handleReport}>
-                        <i className="bi bi-flag me-2"></i>Report Post
-                      </button>
-                    </li>
+                    {canReport() && (
+                      <li>
+                        <button className="dropdown-item" onClick={handleReport}>
+                          <i className="bi bi-flag me-2"></i>Report Post
+                        </button>
+                      </li>
+                    )}
                   </ul>
                 </div>
               </div>

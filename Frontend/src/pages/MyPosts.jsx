@@ -15,7 +15,7 @@ const MyPosts = () => {
 
   useEffect(() => {
     loadMyPosts();
-  }, [filters, pagination.page]);
+  }, [filters, pagination.page, pagination.limit]);
 
   const loadMyPosts = async () => {
     dispatch(setLoading(true));
@@ -42,6 +42,11 @@ const MyPosts = () => {
 
   const handlePageChange = (page) => {
     dispatch(setPagination({ page }));
+    window.scrollTo(0, 0);
+  };
+
+  const handleLimitChange = (newLimit) => {
+    dispatch(setPagination({ limit: newLimit, page: 1 }));
     window.scrollTo(0, 0);
   };
 
@@ -122,6 +127,8 @@ const MyPosts = () => {
               currentPage={pagination.page}
               totalPages={pagination.totalPages || 1}
               onPageChange={handlePageChange}
+              limit={pagination.limit}
+              onLimitChange={handleLimitChange}
             />
           </div>
           {posts.map((post) => (
@@ -140,6 +147,8 @@ const MyPosts = () => {
             currentPage={pagination.page}
             totalPages={pagination.totalPages || 1}
             onPageChange={handlePageChange}
+            limit={pagination.limit}
+            onLimitChange={handleLimitChange}
           />
         </>
       )}

@@ -1,8 +1,7 @@
 from typing import List, Optional
 
 from app.admin.interface import AdminRepositoryInterface
-from app.auth.model import RoleType
-from app.users.model import User
+from app.users.model import RoleType, User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

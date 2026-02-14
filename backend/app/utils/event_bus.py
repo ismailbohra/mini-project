@@ -9,23 +9,32 @@ logger = get_logger(__name__)
 
 
 class RedisEventBus:
-    def __init__(self, redis_url: str):
-        self.redis_url = redis_url
-        self.redis_client: redis.Redis = None
+    """Redis pub/sub event bus using shared Redis client."""
+    
+    def __init__(self, redis_client: redis.Redis):
+        """Initialize with existing Redis client from core.
+        
+        Args:
+            redis_client: Shared Redis client instance from core.redis
+        """
+        self.redis_client = redis_client
         self.pubsub: redis.client.PubSub = None
         self.handlers: Dict[str, list] = {}
         self.listener_task: asyncio.Task = None
 
     async def connect(self):
+        """Initialize pubsub connection."""
         try:
-            self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+            if not self.redis_client:
+                raise RuntimeError("Redis client not provided")
             self.pubsub = self.redis_client.pubsub()
-            logger.info("Redis connection established")
+            logger.info("Redis event bus pubsub initialized")
         except Exception as e:
-            logger.exception(f"Failed to connect to Redis: {e}")
+            logger.exception(f"Failed to initialize Redis pubsub: {e}")
             raise
 
     async def disconnect(self):
+        """Close pubsub connection (client managed by core)."""
         try:
             if self.listener_task:
                 self.listener_task.cancel()
@@ -37,12 +46,9 @@ class RedisEventBus:
             if self.pubsub:
                 await self.pubsub.close()
 
-            if self.redis_client:
-                await self.redis_client.close()
-
-            logger.info("Redis connection closed")
+            logger.info("Redis event bus pubsub closed")
         except Exception as e:
-            logger.exception(f"Error during Redis disconnect: {e}")
+            logger.exception(f"Error during Redis pubsub disconnect: {e}")
 
     async def publish(self, event_name: str, payload: dict):
         try:

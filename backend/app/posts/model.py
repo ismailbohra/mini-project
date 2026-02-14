@@ -2,7 +2,15 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from app.config.database import Base
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -11,7 +19,6 @@ class ReportStatus(PyEnum):
 
     PENDING = "Pending"
     REVIEWED = "Reviewed"
-    DISMISSED = "Dismissed"
     DELETED = "Deleted"
 
 
@@ -61,6 +68,7 @@ class PostTag(Base):
 
 class PostLike(Base):
     __tablename__ = "post_likes"
+    __table_args__ = (UniqueConstraint("user_id", "post_id", name="unique_post_like"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

@@ -34,12 +34,6 @@ export const commentService = {
     await api.delete(`/comments/${commentId}/like`);
   },
 
-  // Get comment likes count
-  getCommentLikesCount: async (commentId) => {
-    const response = await api.get(`/comments/${commentId}/likes/count`);
-    return response.data;
-  },
-
   // Report comment
   reportComment: async (commentId, reason) => {
     const response = await api.post(`/comments/${commentId}/report`, null, {

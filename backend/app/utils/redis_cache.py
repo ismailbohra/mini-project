@@ -8,26 +8,15 @@ logger = get_logger(__name__)
 
 
 class RedisCache:
-    def __init__(self, redis_url: str):
-        self.redis_url = redis_url
-        self.redis_client: Optional[redis.Redis] = None
-
-    async def connect(self):
-        try:
-            self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
-            await self.redis_client.ping()
-            logger.info("Redis cache client connected")
-        except Exception as e:
-            logger.error(f"Failed to connect Redis cache: {e}")
-            self.redis_client = None
-
-    async def disconnect(self):
-        try:
-            if self.redis_client:
-                await self.redis_client.close()
-                logger.info("Redis cache client disconnected")
-        except Exception as e:
-            logger.error(f"Error disconnecting Redis cache: {e}")
+    """Redis cache wrapper using shared Redis client."""
+    
+    def __init__(self, redis_client: redis.Redis):
+        """Initialize with existing Redis client from core.
+        
+        Args:
+            redis_client: Shared Redis client instance from core.redis
+        """
+        self.redis_client = redis_client
 
     async def get_cache(self, key: str) -> Optional[Any]:
         if not self.redis_client:

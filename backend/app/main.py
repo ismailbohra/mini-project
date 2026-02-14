@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.comments.router import router as comments_router
-from app.config.settings import settings
 from app.middleware import RoleVerificationMiddleware
 from app.moderator.router import router as moderator_router
 from app.notifications.router import router as notifications_router
@@ -32,18 +31,23 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     import app.utils.event_bus as event_bus_module
     import app.utils.redis_cache as redis_cache_module
+    from app.config.redis import redis_client
     from app.utils.event_bus import RedisEventBus
     from app.utils.redis_cache import RedisCache
 
     logger.info("Starting application...")
 
-    event_bus_module.event_bus = RedisEventBus(settings.REDIS_URL)
-    await event_bus_module.event_bus.connect()
-    logger.info("Redis event bus connected")
+    # Connect centralized Redis client
+    client = await redis_client.connect()
+    logger.info("Redis client connected")
 
-    redis_cache_module.redis_cache = RedisCache(settings.REDIS_URL)
-    await redis_cache_module.redis_cache.connect()
-    logger.info("Redis cache client connected")
+    # Initialize event bus and cache with shared client
+    event_bus_module.event_bus = RedisEventBus(client)
+    await event_bus_module.event_bus.connect()
+    logger.info("Redis event bus initialized")
+
+    redis_cache_module.redis_cache = RedisCache(client)
+    logger.info("Redis cache initialized")
 
     from app.notifications.subscribers import register_subscribers
 
@@ -56,8 +60,10 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
     await event_bus_module.event_bus.disconnect()
     logger.info("Redis event bus disconnected")
-    await redis_cache_module.redis_cache.disconnect()
-    logger.info("Redis cache client disconnected")
+
+    # Disconnect centralized Redis client
+    await redis_client.disconnect()
+    logger.info("Redis client disconnected")
 
 
 app = FastAPI(

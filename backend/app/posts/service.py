@@ -77,7 +77,9 @@ class PostService:
         self, post_id: int, current_user_id: Optional[int] = None
     ) -> PostResponse:
         """Get a post by ID."""
-        cache_key = f"post:{post_id}"
+        # Use per-user cache key since response includes user-specific fields
+        user_key = current_user_id if current_user_id is not None else 0
+        cache_key = f"post_response:{post_id}:{user_key}"
         cached = await redis_utils.get_cache(cache_key)
         if cached:
             return PostResponse(**cached)
@@ -88,7 +90,9 @@ class PostService:
 
         response = await self._post_to_response(post, current_user_id)
 
-        await redis_utils.set_cache(cache_key, response.model_dump(mode="json"))
+        await redis_utils.set_cache(
+            cache_key, response.model_dump(mode="json"), expire=300
+        )
 
         return response
 
@@ -128,28 +132,13 @@ class PostService:
         sort_order: str = "desc",
     ) -> PostListResponse:
         """Get all posts with search, filter, and sort, including total count."""
-        search_str = search or ""
-        tags_str = ",".join(sorted(tags)) if tags else ""
-        cache_key = (
-            f"posts:list:{skip}:{limit}:{search_str}:{tags_str}:{sort_by}:{sort_order}"
-        )
-        cached = await redis_utils.get_cache(cache_key)
-        if cached:
-            return PostListResponse(**cached)
-
         posts, total = await self.repository.get_all_posts(
             skip, limit, search, tags, sort_by, sort_order
         )
         posts_response = [
             await self._post_to_response(post, current_user_id) for post in posts
         ]
-        result = PostListResponse(posts=posts_response, total=total)
-
-        await redis_utils.set_cache(
-            cache_key, result.model_dump(mode="json"), expire=300
-        )
-
-        return result
+        return PostListResponse(posts=posts_response, total=total)
 
     async def update_post(
         self,
@@ -166,7 +155,7 @@ class PostService:
             raise NotFoundException(f"Post with id {post_id} not found")
 
         # Check if user is the author or has admin/moderator role
-        from app.auth.model import RoleType
+        from app.users.model import RoleType
 
         is_admin_or_moderator = user_role in [
             RoleType.ADMIN.value,
@@ -206,6 +195,7 @@ class PostService:
         updated_post = await self.repository.get_post_by_id(post_id)
 
         await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_pattern(f"post_response:{post_id}:*")
         await redis_utils.delete_pattern("posts:list:*")
         await redis_utils.delete_pattern(f"posts:user:{post.author_id}:*")
 
@@ -229,7 +219,7 @@ class PostService:
             raise NotFoundException(f"Post with id {post_id} not found")
 
         # Check if user is the author or has admin/moderator role
-        from app.auth.model import RoleType
+        from app.users.model import RoleType
 
         is_admin_or_moderator = user_role in [
             RoleType.ADMIN.value,
@@ -241,6 +231,7 @@ class PostService:
         await self.repository.delete_post(post)
 
         await redis_utils.delete_cache(f"post:{post_id}")
+        await redis_utils.delete_pattern(f"post_response:{post_id}:*")
         await redis_utils.delete_cache(f"comments:post:{post_id}")
         await redis_utils.delete_pattern("posts:list:*")
         await redis_utils.delete_pattern(f"posts:user:{post.author_id}:*")
@@ -304,8 +295,7 @@ class PostService:
         if current_user_id:
             like = await self.repository.get_post_like(current_user_id, post.id)
             user_has_liked = like is not None
-
-        return PostResponse(
+        response = PostResponse(
             id=post.id,
             author_id=post.author_id,
             author=author_obj,
@@ -320,6 +310,15 @@ class PostService:
             user_has_liked=user_has_liked,
             image_path=post.image_path,
         )
+
+        # Cache the per-user PostResponse since it includes user-specific fields
+        user_key = current_user_id if current_user_id is not None else 0
+        cache_key = f"post_response:{post.id}:{user_key}"
+        await redis_utils.set_cache(
+            cache_key, response.model_dump(mode="json"), expire=300
+        )
+
+        return response
 
     async def like_post(self, user_id: int, post_id: int) -> PostLikeResponse:
         """Like a post."""
@@ -337,6 +336,8 @@ class PostService:
 
         await redis_utils.delete_cache(f"post:{post_id}")
         await redis_utils.delete_cache(f"post:{post_id}:likes_count")
+        await redis_utils.delete_pattern(f"post_response:{post_id}:*")
+        await redis_utils.delete_pattern("posts:*")
 
         # Emit event for notification (only to author)
         logger.debug(
@@ -380,6 +381,8 @@ class PostService:
 
         await redis_utils.delete_cache(f"post:{post_id}")
         await redis_utils.delete_cache(f"post:{post_id}:likes_count")
+        await redis_utils.delete_pattern(f"post_response:{post_id}:*")
+        await redis_utils.delete_pattern("posts:*")
 
         if event_bus_module.event_bus:
             await event_bus_module.event_bus.publish(

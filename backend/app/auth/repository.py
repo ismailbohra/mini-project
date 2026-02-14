@@ -1,12 +1,12 @@
 from typing import Optional
 
-from app.auth.model import RoleType
-from app.users.model import User
+from app.auth.interface import AuthRepositoryInterface
+from app.users.model import RoleType, User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class AuthRepository:
+class AuthRepository(AuthRepositoryInterface):
     def __init__(self, session: AsyncSession):
         self.session = session
 

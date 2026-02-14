@@ -4,21 +4,22 @@ import { toast } from 'react-toastify';
 import PostCard from '../components/PostCard';
 import FilterPanel from '../components/FilterPanel';
 import Pagination from '../components/Pagination';
-import { setLoading, setPosts, setError, setFilters, setPagination } from '../store/slices/postSlice';
+import { setLoading, setPosts, setError, setFilters, setPagination, clearNewPostAdded } from '../store/slices/postSlice';
 import postService from '../services/postService';
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { posts, loading, filters, pagination } = useSelector((state) => state.posts);
+  const { posts, loading, filters, pagination, newPostAdded } = useSelector((state) => state.posts);
   const { user } = useSelector((state) => state.auth);
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadPosts();
-  }, [filters, pagination.page]);
+  }, [filters, pagination.page, pagination.limit]);
 
   const loadPosts = async () => {
     dispatch(setLoading(true));
+    dispatch(clearNewPostAdded());
     try {
       const params = {
         skip: (pagination.page - 1) * pagination.limit,
@@ -32,7 +33,7 @@ const Home = () => {
 
       // Add tags filter if exists
       if (filters.tags && filters.tags.length > 0) {
-        params.tags = filters.tags;
+        params['tags[]'] = filters.tags;
       }
 
       // Add sort parameters
@@ -61,6 +62,11 @@ const Home = () => {
 
   const handlePageChange = (page) => {
     dispatch(setPagination({ page }));
+    window.scrollTo(0, 0);
+  };
+
+  const handleLimitChange = (newLimit) => {
+    dispatch(setPagination({ limit: newLimit, page: 1 }));
     window.scrollTo(0, 0);
   };
 
@@ -112,17 +118,43 @@ const Home = () => {
       <div className="row mb-3">
         <div className="col">
           <div className="d-flex justify-content-between align-items-center">
-            <h2>
+            <h2 className="d-flex align-items-center">
               <i className="bi bi-house me-2"></i>
               My Feed
+              {newPostAdded && (
+                <span className="badge bg-success ms-2 pulse-badge" style={{ fontSize: '0.6rem' }}>
+                  <i className="bi bi-exclamation-circle me-1"></i>
+                  New Posts
+                </span>
+              )}
             </h2>
-            <button
-              className="btn btn-outline-primary"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <i className="bi bi-funnel me-2"></i>
-              Filters
-            </button>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-outline-success"
+                onClick={loadPosts}
+                disabled={loading}
+                title="Refresh posts"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Reloading...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-arrow-clockwise me-2"></i>
+                    Reload
+                  </>
+                )}
+              </button>
+              <button
+                className="btn btn-outline-primary"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <i className="bi bi-funnel me-2"></i>
+                Filters
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -163,6 +195,8 @@ const Home = () => {
             currentPage={pagination.page}
             totalPages={pagination.totalPages || 1}
             onPageChange={handlePageChange}
+            limit={pagination.limit}
+            onLimitChange={handleLimitChange}
           />
         </>
       )}

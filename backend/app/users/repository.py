@@ -44,10 +44,6 @@ class UserRepository(UserRepositoryInterface):
         await self.session.refresh(user)
         return user
 
-    async def delete(self, user: User) -> None:
-        await self.session.delete(user)
-        await self.session.commit()
-
     async def search_by_username(self, search_term: str, limit: int = 10) -> List[User]:
         """Search users by username pattern for mention autocomplete."""
         query = (

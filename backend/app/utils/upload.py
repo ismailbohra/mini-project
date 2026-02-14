@@ -4,8 +4,10 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
+from app.config.settings import settings
+
 BASE_DIR = Path(__file__).resolve().parents[1]
-ASSETS_DIR = BASE_DIR / "assets"
+ASSETS_DIR = BASE_DIR / settings.ASSETS_DIR.split("/", 1)[-1] if "/" in settings.ASSETS_DIR else BASE_DIR / settings.ASSETS_DIR
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 

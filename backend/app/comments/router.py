@@ -22,20 +22,6 @@ router = APIRouter(prefix="/comments", tags=["comments"])
 
 
 @router.get(
-    "/{comment_id}",
-    response_model=CommentResponse,
-    summary="Get a comment by ID",
-)
-async def get_comment(
-    comment_id: int,
-    comment_service: CommentService = Depends(get_comment_service),
-    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
-):
-    """Get a single comment by ID with all nested replies."""
-    return await comment_service.get_comment(comment_id, current_user_id)
-
-
-@router.get(
     "/post/{post_id}",
     response_model=List[CommentResponse],
     summary="Get all comments for a post",

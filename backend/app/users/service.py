@@ -127,22 +127,6 @@ class UserService:
             logger.exception(f"Error updating user {user_id}: {e}")
             raise
 
-    async def delete_user(self, user_id: int) -> None:
-        try:
-            user = await self.get_user(user_id)
-            await self.repository.delete(user)
-
-            import app.utils.redis as redis_utils
-
-            await redis_utils.delete_cache(f"user:profile:{user_id}")
-
-            logger.info(f"User {user_id} deleted successfully")
-        except UserNotFoundException:
-            raise
-        except Exception as e:
-            logger.exception(f"Error deleting user {user_id}: {e}")
-            raise
-
     async def search_users_for_mentions(
         self, search_term: str, limit: int = 10
     ) -> List[UserMentionResponse]:

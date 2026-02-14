@@ -2,8 +2,7 @@ from typing import List
 
 from app.admin.interface import AdminRepositoryInterface
 from app.admin.schema import AssignRoleRequest, AssignRoleResponse, ToggleUserResponse
-from app.auth.model import RoleType
-from app.users.model import User
+from app.users.model import RoleType, User
 from app.users.schema import UserResponse
 from app.utils.exceptions import (
     NotFoundException,

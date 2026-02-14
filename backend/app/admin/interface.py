@@ -2,8 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from app.auth.model import RoleType
-from app.users.model import User
+from app.users.model import RoleType, User
 
 
 class AdminRepositoryInterface(ABC):

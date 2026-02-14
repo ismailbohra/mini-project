@@ -108,6 +108,9 @@ const postSlice = createSlice({
     newPostAdded: (state, action) => {
       state.newPostAdded = true;
     },
+    clearNewPostAdded: (state) => {
+      state.newPostAdded = false;
+    },
   },
 });
 
@@ -126,6 +129,7 @@ export const {
   updatePostCommentsCount,
   updateFullPost,
   newPostAdded,
+  clearNewPostAdded,
 } = postSlice.actions;
 
 export default postSlice.reducer;

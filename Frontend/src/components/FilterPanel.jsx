@@ -11,6 +11,13 @@ const FilterPanel = ({ filters, onFilterChange, show, onClose }) => {
     loadTags();
   }, []);
 
+  // Sync local state with filters prop when it changes
+  useEffect(() => {
+    setSelectedTags(filters.tags || []);
+    setSortBy(filters.sortBy || 'created_at');
+    setSortOrder(filters.sortOrder || 'desc');
+  }, [filters]);
+
   const loadTags = async () => {
     try {
       const tags = await postService.getAllTags();
@@ -91,7 +98,8 @@ const FilterPanel = ({ filters, onFilterChange, show, onClose }) => {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="created_at\">Creation Date</option>
+            <option value="created_at">Creation Date</option>
+            <option value="updated_at">Last Updated</option>
           </select>
         </div>
 

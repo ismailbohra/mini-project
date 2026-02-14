@@ -1,9 +1,15 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 
-from app.auth.model import RoleType
 from app.config.database import Base
 from sqlalchemy import Boolean, DateTime, Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+class RoleType(str, PyEnum):
+    ADMIN = "Admin"
+    USER = "User"
+    MODERATOR = "Moderator"
 
 
 class User(Base):

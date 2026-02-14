@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange, limit, onLimitChange }) => {
   const pages = [];
   const maxVisible = 5;
   
@@ -15,11 +15,36 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     pages.push(i);
   }
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && !onLimitChange) return null;
 
   return (
-    <nav aria-label="Page navigation">
-      <ul className="pagination justify-content-center">
+    <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 my-3">
+      {/* Items per page selector */}
+      {onLimitChange && (
+        <div className="d-flex align-items-center gap-2">
+          <label htmlFor="limit-select" className="mb-0 text-nowrap">
+            <i className="bi bi-list-ul me-1"></i>
+            Items per page:
+          </label>
+          <select
+            id="limit-select"
+            className="form-select form-select-sm"
+            style={{ width: 'auto' }}
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      )}
+
+      {/* Pagination controls */}
+      <nav aria-label="Page navigation" className="flex-grow-1">
+        <ul className="pagination justify-content-center mb-0">
         <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
           <button
             className="page-link"
@@ -79,6 +104,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         </li>
       </ul>
     </nav>
+    </div>
   );
 };
 

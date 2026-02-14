@@ -155,6 +155,15 @@ async def get_all_posts(
     response: Response = None,
 ):
     """Get all posts with search, filter, and sort capabilities."""
+    # Validate sort_by parameter
+    valid_sort_fields = ["created_at", "updated_at"]
+    if sort_by not in valid_sort_fields:
+        sort_by = "created_at"
+
+    # Validate sort_order parameter
+    if sort_order.lower() not in ["asc", "desc"]:
+        sort_order = "desc"
+
     search_str = search or ""
     tags_str = ",".join(sorted(tags)) if tags else ""
     cache_key = (
@@ -198,33 +207,6 @@ async def get_my_posts(
         response.headers["X-Cache"] = "MISS"
 
     return await post_service.get_user_posts(user_id, skip, limit, user_id)
-
-
-@router.get(
-    "/user/{author_id}",
-    response_model=PostListResponse,
-    summary="Get posts by user ID",
-)
-async def get_user_posts(
-    author_id: int,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    post_service: PostService = Depends(get_post_service),
-    current_user_id: Optional[int] = Depends(get_current_user_id_optional),
-    response: Response = None,
-):
-    """Get all posts by a specific user."""
-    cache_key = f"posts:user:{author_id}:{skip}:{limit}"
-    cached = await redis_utils.get_cache(cache_key)
-    if cached:
-        if response is not None:
-            response.headers["X-Cache"] = "HIT"
-        return PostListResponse(**cached)
-
-    if response is not None:
-        response.headers["X-Cache"] = "MISS"
-
-    return await post_service.get_user_posts(author_id, skip, limit, current_user_id)
 
 
 @router.put(

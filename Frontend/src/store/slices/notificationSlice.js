@@ -6,6 +6,7 @@ const initialState = {
   isConnected: false,
   loading: false,
   error: null,
+  initialLoadComplete: false,
 };
 
 const notificationSlice = createSlice({
@@ -15,6 +16,7 @@ const notificationSlice = createSlice({
     setNotifications: (state, action) => {
       state.notifications = action.payload;
       state.unreadCount = action.payload.filter(n => !n.is_read).length;
+      state.initialLoadComplete = true;
     },
     addNotification: (state, action) => {
       const exists = state.notifications.some(n => n.id === action.payload.id);
@@ -60,6 +62,7 @@ const notificationSlice = createSlice({
       state.notifications = [];
       state.unreadCount = 0;
       state.isConnected = false;
+      state.initialLoadComplete = false;
     },
   },
 });

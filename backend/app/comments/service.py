@@ -109,15 +109,6 @@ class CommentService:
 
         return await self._comment_to_response(comment_with_author, current_user_id)
 
-    async def get_comment(
-        self, comment_id: int, current_user_id: Optional[int] = None
-    ) -> CommentResponse:
-        """Get a comment by ID with nested replies."""
-        comment = await self.repository.get_comment_by_id(comment_id)
-        if not comment:
-            raise NotFoundException(f"Comment with id {comment_id} not found")
-        return await self._comment_to_response(comment, current_user_id)
-
     async def get_post_comments(
         self,
         post_id: int,
@@ -157,7 +148,7 @@ class CommentService:
             raise NotFoundException(f"Comment with id {comment_id} not found")
 
         # Check if user is the author or has admin/moderator role
-        from app.auth.model import RoleType
+        from app.users.model import RoleType
 
         is_admin_or_moderator = user_role in [
             RoleType.ADMIN.value,
@@ -193,7 +184,7 @@ class CommentService:
             raise NotFoundException(f"Comment with id {comment_id} not found")
 
         # Check if user is the author or has admin/moderator role
-        from app.auth.model import RoleType
+        from app.users.model import RoleType
 
         is_admin_or_moderator = user_role in [
             RoleType.ADMIN.value,

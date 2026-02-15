@@ -98,6 +98,12 @@ app.include_router(comments_router)
 app.include_router(moderator_router)
 app.include_router(notifications_router)
 
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "backend"}
+
+
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")

@@ -34,7 +34,7 @@ async def get_pending_post_reports(
 )
 async def update_post_report_status(
     report_id: int,
-    status_value: str = Query(..., regex="^(Reviewed|Dismissed)$"),
+    status_value: str = Query(..., pattern="^(Reviewed|Dismissed)$"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
@@ -64,7 +64,7 @@ async def get_pending_comment_reports(
 )
 async def update_comment_report_status(
     report_id: int,
-    status_value: str = Query(..., regex="^(Reviewed|Dismissed)$"),
+    status_value: str = Query(..., pattern="^(Reviewed|Dismissed)$"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):

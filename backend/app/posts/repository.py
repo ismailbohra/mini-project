@@ -11,7 +11,7 @@ from app.posts.model import (
     ReportStatus,
     Tags,
 )
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -45,7 +45,7 @@ class PostRepository(PostRepositoryInterface):
         """Get post by ID with tags loaded."""
         query = (
             select(Posts)
-            .where(Posts.id == post_id, Posts.is_deleted.is_not(True))
+            .where(Posts.id == post_id, Posts.is_deleted == false())
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
                 selectinload(Posts.author),
@@ -62,7 +62,7 @@ class PostRepository(PostRepositoryInterface):
         count_query = (
             select(func.count())
             .select_from(Posts)
-            .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
+            .where(Posts.author_id == author_id, Posts.is_deleted == false())
         )
         count_result = await self.session.execute(count_query)
         total = count_result.scalar() or 0
@@ -70,7 +70,7 @@ class PostRepository(PostRepositoryInterface):
         # Get posts
         query = (
             select(Posts)
-            .where(Posts.author_id == author_id, Posts.is_deleted.is_not(True))
+            .where(Posts.author_id == author_id, Posts.is_deleted == false())
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
                 selectinload(Posts.author),
@@ -100,13 +100,13 @@ class PostRepository(PostRepositoryInterface):
         count_query = (
             select(func.count(Posts.id.distinct()))
             .select_from(Posts)
-            .where(Posts.is_deleted.is_not(True))
+            .where(Posts.is_deleted == false())
         )
 
         # Build base query for fetching posts
         query = (
             select(Posts)
-            .where(Posts.is_deleted.is_not(True))
+            .where(Posts.is_deleted == false())
             .options(
                 selectinload(Posts.tags).selectinload(PostTag.tag),
                 selectinload(Posts.author),
@@ -300,7 +300,7 @@ class PostRepository(PostRepositoryInterface):
             .select_from(Comment)
             .where(
                 Comment.post_id == post_id,
-                Comment.is_deleted.is_not(True),
+                Comment.is_deleted == false(),
                 Comment.parent_comment_id.is_(None),
             )
         )
@@ -367,7 +367,7 @@ class PostRepository(PostRepositoryInterface):
         title_query = (
             select(Posts.title)
             .where(
-                Posts.is_deleted.is_not(True),
+                Posts.is_deleted == false(),
                 func.lower(Posts.title).like(search_term),
             )
             .distinct()
@@ -382,7 +382,7 @@ class PostRepository(PostRepositoryInterface):
             select(User.username)
             .join(Posts, User.id == Posts.author_id)
             .where(
-                Posts.is_deleted.is_not(True),
+                Posts.is_deleted == false(),
                 func.lower(User.username).like(search_term),
             )
             .distinct()

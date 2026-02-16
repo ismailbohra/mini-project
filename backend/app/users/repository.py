@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from app.users.interface import UserRepositoryInterface
 from app.users.model import User
-from sqlalchemy import select
+from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -50,7 +50,7 @@ class UserRepository(UserRepositoryInterface):
             select(User)
             .where(User.username.ilike(f"%{search_term}%"))
             .where(User.is_active)
-            .where(not User.is_deleted)
+            .where(User.is_deleted == false())
             .limit(limit)
         )
         result = await self.session.execute(query)
@@ -63,7 +63,7 @@ class UserRepository(UserRepositoryInterface):
             select(User)
             .where(User.username.in_(usernames))
             .where(User.is_active)
-            .where(not User.is_deleted)
+            .where(User.is_deleted == false())
         )
         result = await self.session.execute(query)
         return result.scalars().all()

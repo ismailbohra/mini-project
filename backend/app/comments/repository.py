@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.comments.interface import CommentRepositoryInterface
 from app.comments.model import Comment, CommentLike, CommentMention, CommentReport
 from app.posts.model import ReportStatus
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -46,7 +46,7 @@ class CommentRepository(CommentRepositoryInterface):
         """Get comment by ID."""
         query = (
             select(Comment)
-            .where(Comment.id == comment_id, Comment.is_deleted.is_not(True))
+            .where(Comment.id == comment_id, Comment.is_deleted == false())
             .options(selectinload(Comment.author))
         )
         result = await self.session.execute(query)
@@ -61,7 +61,7 @@ class CommentRepository(CommentRepositoryInterface):
             .where(
                 Comment.post_id == post_id,
                 Comment.parent_comment_id.is_(None),
-                Comment.is_deleted.is_not(True),
+                Comment.is_deleted == false(),
             )
             .options(selectinload(Comment.author))
             .offset(skip)
@@ -77,7 +77,7 @@ class CommentRepository(CommentRepositoryInterface):
             select(Comment)
             .where(
                 Comment.parent_comment_id == parent_comment_id,
-                Comment.is_deleted.is_not(True),
+                Comment.is_deleted == false(),
             )
             .options(selectinload(Comment.author))
             .order_by(Comment.created_at.asc())

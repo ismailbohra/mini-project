@@ -22,6 +22,7 @@ import Review from './pages/Review';
 import Notifications from './pages/Notifications';
 import Forbidden from './pages/Forbidden';
 import RoleChanged from './pages/RoleChanged';
+import Dashboard from './pages/Dashboard';
 
 
 function App() {
@@ -47,6 +48,14 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               
               {/* Admin Only */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/users" 
                 element={

@@ -1,7 +1,16 @@
 from typing import List
 
 from app.admin.interface import AdminRepositoryInterface
-from app.admin.schema import AssignRoleRequest, AssignRoleResponse, ToggleUserResponse
+from app.admin.schema import (
+    AssignRoleRequest,
+    AssignRoleResponse,
+    DashboardAnalyticsResponse,
+    TagWithCount,
+    ToggleUserResponse,
+    UserWithMentionCount,
+    UserWithPostCount,
+    UserWithReportCount,
+)
 from app.middleware.role_verification import clear_user_role_cache
 from app.users.model import RoleType, User
 from app.users.schema import UserResponse
@@ -10,6 +19,7 @@ from app.utils.exceptions import (
     UserNotFoundException,
 )
 from app.utils.logging import get_logger
+from app.websocket.manager import ws_manager
 
 logger = get_logger(__name__)
 
@@ -86,4 +96,79 @@ class AdminService:
             role=updated_user.role.value,
             created_at=updated_user.created_at,
             updated_at=updated_user.updated_at,
+        )
+
+    async def get_dashboard_analytics(self) -> DashboardAnalyticsResponse:
+        """Get comprehensive dashboard analytics."""
+        # Get user statistics by role
+        (
+            total_users,
+            admin_count,
+            moderator_count,
+            normal_user_count,
+        ) = await self.repository.get_user_stats_by_role()
+
+        # Get active users from websocket connections
+        active_users = len(ws_manager.active_connections)
+
+        # Get total posts
+        total_posts = await self.repository.get_total_posts()
+
+        # Get user with most posts
+        user_most_posts_data = await self.repository.get_user_with_most_posts()
+        user_with_most_posts = None
+        if user_most_posts_data:
+            user_with_most_posts = UserWithPostCount(
+                user_id=user_most_posts_data[0],
+                username=user_most_posts_data[1],
+                profile_image=user_most_posts_data[2],
+                post_count=user_most_posts_data[3],
+            )
+
+        # Get top 5 mentioned users
+        top_mentioned_data = await self.repository.get_top_mentioned_users(limit=5)
+        top_5_mentioned_users = [
+            UserWithMentionCount(
+                user_id=row[0],
+                username=row[1],
+                profile_image=row[2],
+                mention_count=row[3],
+            )
+            for row in top_mentioned_data
+        ]
+
+        # Get top 5 tags
+        top_tags_data = await self.repository.get_top_tags(limit=5)
+        top_5_tags = [
+            TagWithCount(
+                tag_id=row[0],
+                tag_name=row[1],
+                usage_count=row[2],
+            )
+            for row in top_tags_data
+        ]
+
+        # Get top 5 reported users
+        top_reported_data = await self.repository.get_top_reported_users(limit=5)
+        top_5_reported_users = [
+            UserWithReportCount(
+                user_id=row[0],
+                username=row[1],
+                profile_image=row[2],
+                report_count=row[3],
+            )
+            for row in top_reported_data
+        ]
+
+        return DashboardAnalyticsResponse(
+            total_users=total_users,
+            admin_count=admin_count,
+            moderator_count=moderator_count,
+            normal_user_count=normal_user_count,
+            active_users=active_users,
+            total_posts=total_posts,
+            user_with_most_posts=user_with_most_posts,
+            top_5_mentioned_users=top_5_mentioned_users,
+            top_5_tags=top_5_tags,
+            top_5_reported_users=top_5_reported_users,
         )

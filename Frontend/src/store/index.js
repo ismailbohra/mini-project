@@ -2,7 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import postReducer from './slices/postSlice';
 import commentReducer from './slices/commentSlice';
-import userReducer from './slices/userSlice';
+import userReducer from './slices/adminSlice';
 import reportReducer from './slices/reportSlice';
 import notificationReducer from './slices/notificationSlice';
 

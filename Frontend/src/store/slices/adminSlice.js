@@ -9,6 +9,11 @@ const initialState = {
     page: 1,
     limit: 10,
   },
+  // Analytics state
+  analytics: null,
+  analyticsLoading: false,
+  analyticsError: null,
+  activeUsersRealtime: 0,
 };
 
 const userSlice = createSlice({
@@ -42,6 +47,26 @@ const userSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    // Analytics actions
+    setAnalyticsLoading: (state, action) => {
+      state.analyticsLoading = action.payload;
+    },
+    setAnalytics: (state, action) => {
+      state.analytics = action.payload;
+      state.analyticsLoading = false;
+      state.analyticsError = null;
+      state.activeUsersRealtime = action.payload.active_users;
+    },
+    setAnalyticsError: (state, action) => {
+      state.analyticsError = action.payload;
+      state.analyticsLoading = false;
+    },
+    clearAnalyticsError: (state) => {
+      state.analyticsError = null;
+    },
+    updateActiveUsersRealtime: (state, action) => {
+      state.activeUsersRealtime = action.payload;
+    },
   },
 });
 
@@ -53,6 +78,11 @@ export const {
   setError,
   setPagination,
   clearError,
+  setAnalyticsLoading,
+  setAnalytics,
+  setAnalyticsError,
+  clearAnalyticsError,
+  updateActiveUsersRealtime,
 } = userSlice.actions;
 
 export default userSlice.reducer;

@@ -1,11 +1,16 @@
 from typing import List
 
 from app.admin.dependency import get_admin_service
-from app.admin.schema import AssignRoleRequest, AssignRoleResponse, ToggleUserResponse
+from app.admin.schema import (
+    AssignRoleRequest,
+    AssignRoleResponse,
+    DashboardAnalyticsResponse,
+    ToggleUserResponse,
+)
 from app.admin.service import AdminService
 from app.auth.dependency import get_current_user_id, require_admin
 from app.users.schema import UserResponse
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -72,3 +77,59 @@ async def toggle_user(
     Requires Admin role.
     """
     return await admin_service.toggle_user(user_id)
+
+
+@router.get(
+    "/dashboard/analytics",
+    response_model=DashboardAnalyticsResponse,
+    summary="Get dashboard analytics (Admin only)",
+    description="Retrieve comprehensive analytics for admin dashboard including user stats, post stats, mentions, tags, and reports",
+)
+async def get_dashboard_analytics(
+    admin_service: AdminService = Depends(get_admin_service),
+    _: bool = Depends(require_admin),
+) -> DashboardAnalyticsResponse:
+    """
+    Get comprehensive dashboard analytics (Admin only):
+    - **User Statistics**: Total users, admin count, moderator count, normal user count, active users
+    - **Post Statistics**: Total posts, user with most posts
+    - **Engagement**: Top 5 mentioned users, top 5 tags
+    - **Moderation**: Top 5 reported users
+
+    Requires Admin role.
+    """
+    return await admin_service.get_dashboard_analytics()
+
+
+@router.websocket("/dashboard/ws")
+async def admin_dashboard_websocket(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time admin dashboard updates.
+    Sends active user count updates in real-time.
+    """
+    from app.websocket.manager import ws_manager
+
+    await websocket.accept()
+
+    try:
+        # Receive initial connection data with user_id
+        data = await websocket.receive_json()
+        user_id = data.get("user_id")
+
+        if not user_id:
+            await websocket.close(code=1008)
+            return
+
+        # Connect to admin dashboard
+        await ws_manager.connect_admin_dashboard(user_id, websocket)
+
+        try:
+            # Keep connection alive and listen for client messages
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            await ws_manager.disconnect_admin_dashboard(user_id, websocket)
+    except Exception:
+        if user_id:
+            await ws_manager.disconnect_admin_dashboard(user_id, websocket)
+        await websocket.close()

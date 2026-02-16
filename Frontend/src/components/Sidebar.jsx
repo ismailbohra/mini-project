@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen }) => {
     { path: '/my-posts', label: 'My Posts', icon: 'bi-file-text', roles: ['User', 'Moderator', 'Admin'] },
     { path: '/create-post', label: 'Create Post', icon: 'bi-plus-circle', roles: ['User', 'Moderator', 'Admin'] },
     { path: '/notifications', label: 'Notifications', icon: 'bi-bell', roles: ['User', 'Moderator', 'Admin'] },
+    { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2', roles: ['Admin'] },
     { path: '/review', label: 'Review', icon: 'bi-flag', roles: ['Moderator', 'Admin'] },
     { path: '/users', label: 'Users', icon: 'bi-people', roles: ['Admin'] },
   ];

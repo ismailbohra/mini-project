@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import userService from '../services/userService';
+import adminService from '../services/adminService';
 import Pagination from '../components/Pagination';
 
 const Users = () => {
@@ -21,7 +21,7 @@ const Users = () => {
         skip: (currentPage - 1) * limit,
         limit: limit,
       };
-      const data = await userService.getAllUsers(params);
+      const data = await adminService.getAllUsers(params);
       setUsers(data);
       const total = Math.ceil((data.length || 0) / limit);
       setTotalPages(total);
@@ -38,7 +38,7 @@ const Users = () => {
     }
 
     try {
-      await userService.updateUserRole(userId, newRole);
+      await adminService.updateUserRole(userId, newRole);
       toast.success('User role updated successfully');
       loadUsers();
     } catch (error) {
@@ -53,7 +53,7 @@ const Users = () => {
     }
 
     try {
-      const updated = await userService.toggleUser(userId);
+      const updated = await adminService.toggleUser(userId);
       toast.success(`User ${updated.is_active ? 'activated' : 'deactivated'} successfully`);
       loadUsers();
     } catch (error) {

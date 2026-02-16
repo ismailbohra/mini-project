@@ -22,6 +22,11 @@ export const userService = {
     const response = await api.patch(`/admin/users/${userId}/toggle`);
     return response.data;
   },
+
+  dasboardAnalytics: async () => {
+    const response = await api.get('/admin/dashboard/analytics');
+    return response.data;
+  },
 };
 
 export default userService;

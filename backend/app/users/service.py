@@ -1,11 +1,15 @@
 from typing import List, Optional
 
-from app.config.security import get_password_hash
 from app.users.interface import UserRepositoryInterface
 from app.users.model import User
 from app.users.schema import UserCreate, UserMentionResponse, UserUpdate
-from app.utils.exceptions import UserAlreadyExistsException, UserNotFoundException
+from app.utils.exceptions import (
+    InvalidPasswordException,
+    UserAlreadyExistsException,
+    UserNotFoundException,
+)
 from app.utils.logging import get_logger
+from app.utils.security import get_password_hash, validate_password
 
 logger = get_logger(__name__)
 
@@ -71,6 +75,8 @@ class UserService:
             if existing_username:
                 raise UserAlreadyExistsException(message="Username already taken")
 
+            validate_password(user_create.password)
+
             user_data = user_create.model_dump()
             user_data["hashed_password"] = get_password_hash(user_data.pop("password"))
             if profile_image:
@@ -79,7 +85,7 @@ class UserService:
             user = await self.repository.create(user_data)
             logger.info(f"User created successfully: {user.email}")
             return user
-        except UserAlreadyExistsException:
+        except (UserAlreadyExistsException, InvalidPasswordException):
             raise
         except Exception as e:
             logger.exception(f"Error creating user: {e}")
@@ -89,11 +95,15 @@ class UserService:
         self, user_id: int, user_update: UserUpdate, profile_image: Optional[str] = None
     ) -> User:
         try:
-            user = await self.get_user(user_id)
+            # Fetch directly from database (bypass cache) to ensure the user is attached to the session
+            user = await self.repository.get_by_id(user_id)
+            if not user:
+                raise UserNotFoundException(message=f"User with id {user_id} not found")
 
             update_data = user_update.model_dump(exclude_unset=True)
 
             if "password" in update_data:
+                validate_password(update_data["password"])
                 update_data["hashed_password"] = get_password_hash(
                     update_data.pop("password")
                 )
@@ -121,7 +131,11 @@ class UserService:
 
             logger.info(f"User {user_id} updated successfully")
             return updated_user
-        except (UserNotFoundException, UserAlreadyExistsException):
+        except (
+            UserNotFoundException,
+            UserAlreadyExistsException,
+            InvalidPasswordException,
+        ):
             raise
         except Exception as e:
             logger.exception(f"Error updating user {user_id}: {e}")

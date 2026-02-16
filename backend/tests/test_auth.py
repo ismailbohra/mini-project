@@ -14,9 +14,9 @@ import pytest
 from app.auth.repository import AuthRepository
 from app.auth.schema import ChangePasswordRequest, UserLoginRequest
 from app.auth.service import AuthService
-from app.config.security import get_password_hash
 from app.users.model import RoleType, User
 from app.utils.exceptions import NotFoundException, UnauthorizedException
+from app.utils.security import get_password_hash
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

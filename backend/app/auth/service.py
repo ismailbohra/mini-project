@@ -8,18 +8,20 @@ from app.auth.schema import (
     UserLoginRequest,
     UserResponse,
 )
-from app.config.security import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    create_access_token,
-    get_password_hash,
-    verify_password,
-)
 from app.users.model import User
 from app.utils.exceptions import (
+    InvalidPasswordException,
     NotFoundException,
     UnauthorizedException,
 )
 from app.utils.logging import get_logger
+from app.utils.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    create_access_token,
+    get_password_hash,
+    validate_password,
+    verify_password,
+)
 
 logger = get_logger(__name__)
 
@@ -79,6 +81,8 @@ class AuthService:
             if not verify_password(request.old_password, user.hashed_password):
                 raise UnauthorizedException("Invalid old password")
 
+            validate_password(request.new_password)
+
             # Hash new password
             new_hashed_password = get_password_hash(request.new_password)
 
@@ -87,7 +91,7 @@ class AuthService:
 
             logger.info(f"Password changed successfully for user {user_id}")
             return {"message": "Password changed successfully"}
-        except (NotFoundException, UnauthorizedException):
+        except (NotFoundException, UnauthorizedException, InvalidPasswordException):
             raise
         except Exception as e:
             logger.exception(f"Error changing password for user {user_id}: {e}")

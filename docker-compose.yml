@@ -36,6 +36,8 @@ services:
       - ./backend/.env
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend/app/assets:/app/app/assets
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +53,9 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost/api
+        VITE_WS_URL: ws://localhost
     ports:
       - "80:80"
     depends_on:

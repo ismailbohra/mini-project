@@ -78,7 +78,7 @@ async def get_all_tags(
 
 
 @router.post(
-    "/",
+    "",
     response_model=PostResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new post",
@@ -133,7 +133,7 @@ async def get_post(
 
 
 @router.get(
-    "/",
+    "",
     response_model=PostListResponse,
     summary="Get all posts",
 )

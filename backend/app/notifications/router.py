@@ -20,7 +20,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[NotificationResponse],
     status_code=status.HTTP_200_OK,
 )

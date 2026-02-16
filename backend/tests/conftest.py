@@ -12,6 +12,7 @@ import asyncio
 import os
 from pathlib import Path
 from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from app.config.database import get_session
@@ -23,6 +24,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # Test database URL (SQLite)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 TEST_DATABASE_URL_SYNC = "sqlite:///./test.db"
+
+# Override settings for testing
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["DATABASE_URL_SYNC"] = TEST_DATABASE_URL_SYNC
+os.environ["REDIS_URL"] = "redis://localhost:6379/15"
+os.environ["REDIS_HOST"] = "localhost"
+os.environ["REDIS_PORT"] = "6379"
+os.environ["REDIS_DB"] = "15"
 
 # Create test engine
 test_engine = create_async_engine(
@@ -171,19 +180,35 @@ async def client(setup_test_database) -> AsyncGenerator[AsyncClient, None]:
 
     This fixture:
     - Overrides the database session dependency to use test database
+    - Mocks Redis to prevent actual connections during tests
     - Provides an AsyncClient for making API requests
     - Cleans up after tests
     """
     # Override the database session dependency
     app.dependency_overrides[get_session] = override_get_session
 
-    # Disable Redis caching for tests
-    os.environ["REDIS_URL"] = "redis://localhost:6379/15"  # Use test Redis DB
+    # Mock Redis connection to prevent actual Redis connections
+    mock_redis_client = AsyncMock()
+    mock_redis_client.get = AsyncMock(return_value=None)
+    mock_redis_client.set = AsyncMock(return_value=True)
+    mock_redis_client.delete = AsyncMock(return_value=1)
+    mock_redis_client.publish = AsyncMock(return_value=1)
+    mock_redis_client.ping = AsyncMock(return_value=True)
+    mock_redis_client.close = AsyncMock()
+    mock_redis_client.pubsub = MagicMock(return_value=AsyncMock())
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test/api"
-    ) as ac:
-        yield ac
+    # Patch the Redis client's connect method
+    with (
+        patch("app.config.redis.redis_client.connect", return_value=mock_redis_client),
+        patch(
+            "app.config.redis.redis_client.get_client", return_value=mock_redis_client
+        ),
+        patch("redis.asyncio.from_url", return_value=mock_redis_client),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test/api"
+        ) as ac:
+            yield ac
 
     # Clear overrides
     app.dependency_overrides.clear()
@@ -198,10 +223,21 @@ def sync_client(setup_test_database) -> Generator[TestClient, None, None]:
     """
     app.dependency_overrides[get_session] = override_get_session
 
-    # Disable Redis caching for tests
-    os.environ["REDIS_URL"] = "redis://localhost:6379/15"
+    # Mock Redis client to prevent actual connections
+    mock_redis_client = AsyncMock()
+    mock_redis_client.get = AsyncMock(return_value=None)
+    mock_redis_client.set = AsyncMock(return_value=True)
+    mock_redis_client.ping = AsyncMock(return_value=True)
+    mock_redis_client.close = AsyncMock()
 
-    with TestClient(app, base_url="http://test/api") as client:
-        yield client
+    with (
+        patch("app.config.redis.redis_client.connect", return_value=mock_redis_client),
+        patch(
+            "app.config.redis.redis_client.get_client", return_value=mock_redis_client
+        ),
+        patch("redis.asyncio.from_url", return_value=mock_redis_client),
+    ):
+        with TestClient(app, base_url="http://test/api") as client:
+            yield client
 
     app.dependency_overrides.clear()

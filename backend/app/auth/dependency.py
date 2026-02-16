@@ -3,13 +3,13 @@ from typing import List, Optional
 from app.auth.repository import AuthRepository
 from app.auth.service import AuthService
 from app.config.database import get_session
-from app.config.security import decode_token
 from app.users.model import RoleType
 from app.utils.exceptions import ForbiddenException, UnauthorizedException
 from app.utils.redis import (
     get_user_role_from_cache,
     set_user_role_in_cache,
 )
+from app.utils.security import decode_token
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession

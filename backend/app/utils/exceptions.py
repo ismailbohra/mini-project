@@ -115,6 +115,13 @@ class UserAlreadyDeleted(NotFoundException):
         super().__init__(message)
 
 
+class InvalidPasswordException(BadRequestException):
+    """Exception raised when password is invalid."""
+
+    def __init__(self, message: str = "Invalid password"):
+        super().__init__(message=message)
+
+
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """Handle custom application exceptions."""
     logger.error(

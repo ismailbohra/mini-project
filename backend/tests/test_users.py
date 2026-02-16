@@ -13,12 +13,12 @@ Tests:
 """
 
 import pytest
-from app.config.security import get_password_hash, verify_password
 from app.users.model import RoleType, User
 from app.users.repository import UserRepository
 from app.users.schema import UserCreate, UserUpdate
 from app.users.service import UserService
 from app.utils.exceptions import UserAlreadyExistsException, UserNotFoundException
+from app.utils.security import get_password_hash, verify_password
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

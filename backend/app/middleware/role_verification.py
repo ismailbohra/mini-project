@@ -9,10 +9,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.auth.repository import AuthRepository
 from app.config.database import get_session
-from app.config.security import decode_token
 from app.utils.exceptions import UnauthorizedException
 from app.utils.logging import get_logger
 from app.utils.redis import get_user_role_from_cache, set_user_role_in_cache
+from app.utils.security import decode_token
 
 logger = get_logger(__name__)
 

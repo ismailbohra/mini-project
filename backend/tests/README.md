@@ -2,6 +2,23 @@
 
 This directory contains the test suite for the backend application.
 
+## Database Configuration
+
+### Testing (SQLite)
+Tests use **SQLite** for speed and isolation:
+- Database: `sqlite+aiosqlite:///./test.db`
+- No external dependencies required
+- Automatically created and cleaned up
+- Each test runs in isolation
+
+### Production (PostgreSQL)
+Production uses **PostgreSQL**:
+- Configured via environment variables in `.env`
+- Runs in Docker container
+- Persistent data storage
+
+The test configuration automatically switches to SQLite when running tests, ensuring your production database is never affected.
+
 ## Test Structure
 
 - **`conftest.py`**: Pytest configuration and fixtures
@@ -83,15 +100,20 @@ pytest --cov=app --cov-report=html
 
 ## Test Database
 
-- Tests use **SQLite** instead of PostgreSQL for faster execution
-- Database is created at `./test.db`
+- Tests use **SQLite** (`test.db`) instead of PostgreSQL for faster execution and isolation
+- Database is created at `./test.db` in the backend directory
 - Tables are created directly from SQLAlchemy models (not via Alembic migrations)
 - Each test gets isolated data - tables are cleared automatically after each test
-- Database is cleaned up after test session completes
+- Database is automatically cleaned up after test session completes
+- **Redis is mocked** to prevent actual connections during tests
+
+**Important**: The test configuration (`tests/__init__.py` and `conftest.py`) automatically 
+sets environment variables to use SQLite. This ensures your **production PostgreSQL database 
+is never touched** during testing.
 
 **Note**: We use direct table creation (`Base.metadata.create_all()`) instead of 
 Alembic migrations because SQLite doesn't support all PostgreSQL-specific features 
-used in the migrations (like `pg_enum`).
+used in the migrations (like `pg_enum` or certain ALTER TABLE operations).
 
 ## Test Fixtures
 
@@ -120,7 +142,9 @@ used in the migrations (like `pg_enum`).
 
 ## Notes
 
-- Redis is configured to use database 15 for testing to avoid conflicts
-- Tests are isolated and do not affect production data
+- **Tests use SQLite**, production uses PostgreSQL - they are completely isolated
+- **Redis is mocked** during tests using `unittest.mock` to prevent actual connections
+- Redis would use database 15 if it were to connect, to avoid conflicts with production (db 0)
+- Tests are fully isolated and **never affect production data**
 - Each test gets a fresh database session
-- Migrations ensure the test database schema matches production
+- Test database schema is created directly from models, ensuring it matches the application structure

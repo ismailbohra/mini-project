@@ -33,7 +33,7 @@ async def get_current_user(
     return await service.get_user(user_id)
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     username: str = Form(...),
     email: EmailStr = Form(...),
@@ -80,7 +80,7 @@ async def search_users_for_mentions(
     return await service.search_users_for_mentions(q, limit)
 
 
-@router.put("/", response_model=UserResponse)
+@router.put("", response_model=UserResponse)
 async def update_user(
     username: str | None = Form(None),
     password: str | None = Form(None),

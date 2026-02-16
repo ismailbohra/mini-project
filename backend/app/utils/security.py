@@ -1,13 +1,11 @@
-"""Security utilities for password hashing and JWT tokens."""
-
-import secrets
+import re
 from datetime import datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from .settings import settings
+from ..config.settings import settings
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -79,3 +77,33 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return payload
     except JWTError:
         return None
+
+
+def validate_password(password: str) -> None:
+    """Validate password strength.
+
+    Args:
+        password: Password to validate
+
+    Raises:
+        InvalidPasswordException: If password doesn't meet requirements
+    """
+    from app.utils.exceptions import InvalidPasswordException
+
+    if len(password) < 8:
+        raise InvalidPasswordException("Password must be at least 8 characters long")
+
+    if not re.search(r"[A-Z]", password):
+        raise InvalidPasswordException(
+            "Password must contain at least one uppercase letter"
+        )
+
+    if not re.search(r"[a-z]", password):
+        raise InvalidPasswordException(
+            "Password must contain at least one lowercase letter"
+        )
+
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise InvalidPasswordException(
+            "Password must contain at least one special character"
+        )

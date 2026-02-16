@@ -104,7 +104,7 @@ const Dashboard = () => {
           </div>
           <div className="metric-content">
             <h3>{analytics.normal_user_count}</h3>
-            <p>Regular Users</p>
+            <p>Users</p>
           </div>
         </div>
       </div>

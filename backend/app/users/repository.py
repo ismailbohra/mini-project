@@ -49,8 +49,8 @@ class UserRepository(UserRepositoryInterface):
         query = (
             select(User)
             .where(User.username.ilike(f"%{search_term}%"))
-            .where(User.is_active == True)
-            .where(User.is_deleted == False)
+            .where(User.is_active)
+            .where(not User.is_deleted)
             .limit(limit)
         )
         result = await self.session.execute(query)
@@ -62,8 +62,8 @@ class UserRepository(UserRepositoryInterface):
         query = (
             select(User)
             .where(User.username.in_(usernames))
-            .where(User.is_active == True)
-            .where(User.is_deleted == False)
+            .where(User.is_active)
+            .where(not User.is_deleted)
         )
         result = await self.session.execute(query)
         return result.scalars().all()

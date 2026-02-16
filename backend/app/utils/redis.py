@@ -1,4 +1,3 @@
-import json
 from typing import Any, Optional
 
 import app.utils.redis_cache as redis_cache_module

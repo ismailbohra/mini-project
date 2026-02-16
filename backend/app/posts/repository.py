@@ -116,14 +116,12 @@ class PostRepository(PostRepositoryInterface):
         # Track if we need distinct (when joins are added)
         needs_distinct = False
         has_tag_join = False
-        has_author_join = False
 
         # Search functionality
         if search:
             search_term = f"%{search.lower()}%"
             needs_distinct = True
             has_tag_join = True
-            has_author_join = True
             # Apply search to count query
             count_query = (
                 count_query.outerjoin(Posts.author)

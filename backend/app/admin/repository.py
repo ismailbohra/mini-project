@@ -41,27 +41,27 @@ class AdminRepository(AdminRepositoryInterface):
     async def get_user_stats_by_role(self) -> Tuple[int, int, int, int]:
         """Get user statistics by role (total, admin, moderator, normal)."""
         # Total users
-        total_query = select(func.count(User.id)).where(User.is_deleted == False)
+        total_query = select(func.count(User.id)).where(not User.is_deleted)
         total_result = await self.session.execute(total_query)
         total_users = total_result.scalar() or 0
 
         # Admin count
         admin_query = select(func.count(User.id)).where(
-            User.role == RoleType.ADMIN, User.is_deleted == False
+            User.role == RoleType.ADMIN, not User.is_deleted
         )
         admin_result = await self.session.execute(admin_query)
         admin_count = admin_result.scalar() or 0
 
         # Moderator count
         moderator_query = select(func.count(User.id)).where(
-            User.role == RoleType.MODERATOR, User.is_deleted == False
+            User.role == RoleType.MODERATOR, not User.is_deleted
         )
         moderator_result = await self.session.execute(moderator_query)
         moderator_count = moderator_result.scalar() or 0
 
         # Normal user count
         user_query = select(func.count(User.id)).where(
-            User.role == RoleType.USER, User.is_deleted == False
+            User.role == RoleType.USER, not User.is_deleted
         )
         user_result = await self.session.execute(user_query)
         normal_user_count = user_result.scalar() or 0
@@ -70,7 +70,7 @@ class AdminRepository(AdminRepositoryInterface):
 
     async def get_total_posts(self) -> int:
         """Get total number of posts."""
-        query = select(func.count(Posts.id)).where(Posts.is_deleted == False)
+        query = select(func.count(Posts.id)).where(not Posts.is_deleted)
         result = await self.session.execute(query)
         return result.scalar() or 0
 
@@ -84,7 +84,7 @@ class AdminRepository(AdminRepositoryInterface):
                 func.count(Posts.id).label("post_count"),
             )
             .join(Posts, User.id == Posts.author_id)
-            .where(Posts.is_deleted == False, User.is_deleted == False)
+            .where(not Posts.is_deleted, not User.is_deleted)
             .group_by(User.id, User.username, User.profile_image)
             .order_by(func.count(Posts.id).desc())
             .limit(1)
@@ -105,7 +105,7 @@ class AdminRepository(AdminRepositoryInterface):
                 func.count(PostMention.user_id).label("mention_count"),
             )
             .join(PostMention, User.id == PostMention.user_id)
-            .where(User.is_deleted == False)
+            .where(not User.is_deleted)
             .group_by(User.id, User.username, User.profile_image)
             .order_by(func.count(PostMention.user_id).desc())
             .limit(limit)
@@ -142,7 +142,7 @@ class AdminRepository(AdminRepositoryInterface):
             )
             .join(Posts, User.id == Posts.author_id)
             .join(PostReport, Posts.id == PostReport.post_id)
-            .where(User.is_deleted == False, Posts.is_deleted == False)
+            .where(not User.is_deleted, not Posts.is_deleted)
             .group_by(User.id, User.username, User.profile_image)
             .order_by(func.count(PostReport.id).desc())
             .limit(limit)

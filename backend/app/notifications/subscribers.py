@@ -290,7 +290,7 @@ async def on_comment_liked(payload: dict):
 async def on_post_state_updated(payload: dict):
     try:
         post_id = payload.get("post_id")
-        actor_id = payload.get("actor_id")
+        payload.get("actor_id")
 
         from app.config.database import AsyncSessionLocal
         from app.posts.repository import PostRepository
@@ -440,7 +440,7 @@ async def on_post_added(payload: dict):
 async def on_post_updated(payload: dict):
     try:
         post_id = payload.get("post_id")
-        actor_id = payload.get("actor_id")
+        payload.get("actor_id")
 
         from app.config.database import AsyncSessionLocal
         from app.posts.repository import PostRepository

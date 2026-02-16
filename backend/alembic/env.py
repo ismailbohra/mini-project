@@ -1,20 +1,8 @@
 from logging.config import fileConfig
 
 from alembic import context
-from app.comments.model import Comment, CommentLike, CommentMention, CommentReport
 from app.config.database import Base
 from app.config.settings import settings
-from app.notifications.model import Notification
-from app.posts.model import (
-    PostLike,
-    PostMention,
-    PostReport,
-    Posts,
-    PostTag,
-    ReportStatus,
-    Tags,
-)
-from app.users.model import RoleType, User
 from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -15,6 +15,7 @@ export const useMentionAutocomplete = (text, cursorPosition) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionStartPos, setMentionStartPos] = useState(null);
+  const debounceRef = useRef(null);
 
   // Extract mention query at cursor position
   const extractMentionQuery = useCallback((text, cursorPos) => {
@@ -54,27 +55,36 @@ export const useMentionAutocomplete = (text, cursorPosition) => {
     };
   }, []);
 
-  // Fetch user suggestions
-  const fetchSuggestions = useCallback(async (query) => {
+  // Fetch user suggestions with debounce
+  const fetchSuggestions = useCallback((query) => {
+    // Clear any pending timeout
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
     if (query.length < 1) {
       setSuggestions([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/users/search/mentions`, {
-        params: { q: query, limit: 10 },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuggestions(response.data);
-    } catch (error) {
-      console.error('Error fetching mention suggestions:', error);
-      setSuggestions([]);
-    } finally {
-      setIsLoading(false);
-    }
+    
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/users/search/mentions`, {
+          params: { q: query, limit: 10 },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setSuggestions(response.data);
+      } catch (error) {
+        console.error('Error fetching mention suggestions:', error);
+        setSuggestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300); // 300ms debounce
   }, []);
 
   // Update mention state when text or cursor changes
@@ -91,6 +101,10 @@ export const useMentionAutocomplete = (text, cursorPosition) => {
       setSuggestions([]);
       setMentionQuery('');
       setMentionStartPos(null);
+      setIsLoading(false);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
     }
   }, [text, cursorPosition, extractMentionQuery, fetchSuggestions]);
 

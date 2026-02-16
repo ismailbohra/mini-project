@@ -21,4 +21,5 @@ COPY . .
 EXPOSE 8000
 
 # run migrations, then start app
-CMD sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+# Use single worker for WebSocket support and to avoid duplicate event processing
+CMD sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"

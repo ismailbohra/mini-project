@@ -2,6 +2,7 @@ from typing import List
 
 from app.admin.interface import AdminRepositoryInterface
 from app.admin.schema import AssignRoleRequest, AssignRoleResponse, ToggleUserResponse
+from app.middleware.role_verification import clear_user_role_cache
 from app.users.model import RoleType, User
 from app.users.schema import UserResponse
 from app.utils.exceptions import (
@@ -9,7 +10,6 @@ from app.utils.exceptions import (
     UserNotFoundException,
 )
 from app.utils.logging import get_logger
-from app.utils.redis import clear_user_role_cache
 
 logger = get_logger(__name__)
 

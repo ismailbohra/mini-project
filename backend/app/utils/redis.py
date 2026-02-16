@@ -52,31 +52,3 @@ async def delete_pattern(pattern: str) -> int:
     except Exception as e:
         logger.warning(f"Redis delete_pattern error for pattern {pattern}: {e}")
         return 0
-
-
-# Role cache functions
-ROLE_CACHE_KEY_PREFIX = "user_role:"
-ROLE_CACHE_EXPIRY = 3600  # 1 hour
-
-
-def get_role_cache_key(user_id: int) -> str:
-    """Generate Redis key for user role cache."""
-    return f"{ROLE_CACHE_KEY_PREFIX}{user_id}"
-
-
-async def get_user_role_from_cache(user_id: int) -> Optional[str]:
-    """Get user role from Redis cache."""
-    key = get_role_cache_key(user_id)
-    return await get_cache(key)
-
-
-async def set_user_role_in_cache(user_id: int, role: str) -> bool:
-    """Set user role in Redis cache with expiry."""
-    key = get_role_cache_key(user_id)
-    return await set_cache(key, role, expire=ROLE_CACHE_EXPIRY)
-
-
-async def clear_user_role_cache(user_id: int) -> bool:
-    """Clear user role from Redis cache."""
-    key = get_role_cache_key(user_id)
-    return await delete_cache(key)

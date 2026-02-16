@@ -11,6 +11,10 @@ const Login = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
   
+  useEffect(() => {
+    dispatch(clearError());
+  }, []);
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',

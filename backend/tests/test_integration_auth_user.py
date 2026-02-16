@@ -37,7 +37,7 @@ class TestAuthUserE2E:
         }
 
         create_response = await client.post(
-            "/users/",
+            "/users",
             data=user_data,
         )
 
@@ -128,7 +128,7 @@ class TestAuthUserE2E:
             "password": "Password123!",
         }
 
-        first_response = await client.post("/users/", data=user_data)
+        first_response = await client.post("/users", data=user_data)
         assert first_response.status_code == 201
 
         # Try to create second user with same email
@@ -138,7 +138,7 @@ class TestAuthUserE2E:
             "password": "Password123!",
         }
 
-        second_response = await client.post("/users/", data=user_data2)
+        second_response = await client.post("/users", data=user_data2)
         assert second_response.status_code == 400
         error_detail = second_response.json().get("detail", second_response.json())
         assert "Email already registered" in str(error_detail)
@@ -153,7 +153,7 @@ class TestAuthUserE2E:
             "password": "Password123!",
         }
 
-        first_response = await client.post("/users/", data=user_data)
+        first_response = await client.post("/users", data=user_data)
         assert first_response.status_code == 201
 
         # Try to create second user with same username
@@ -163,7 +163,7 @@ class TestAuthUserE2E:
             "password": "Password123!",
         }
 
-        second_response = await client.post("/users/", data=user_data2)
+        second_response = await client.post("/users", data=user_data2)
         assert second_response.status_code == 400
         error_detail = second_response.json().get("detail", second_response.json())
         assert "Username already taken" in str(error_detail)
@@ -205,7 +205,7 @@ class TestAuthUserE2E:
             "password": "OriginalPassword123!",
         }
 
-        create_response = await client.post("/users/", data=user_data)
+        create_response = await client.post("/users", data=user_data)
         assert create_response.status_code == 201
 
         login_data = {
@@ -243,7 +243,7 @@ class TestAuthUserE2E:
             "password": "Password123!",
         }
 
-        create_response = await client.post("/users/", data=user_data)
+        create_response = await client.post("/users", data=user_data)
         assert create_response.status_code == 201
 
         login_data = {
@@ -259,7 +259,7 @@ class TestAuthUserE2E:
         update_data = {"username": "updatedusername"}
 
         response = await client.put(
-            "/users/",
+            "/users",
             data=update_data,
             headers=headers,
         )

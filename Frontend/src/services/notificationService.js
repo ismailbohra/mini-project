@@ -2,7 +2,7 @@ import api from './api';
 
 const notificationService = {
   getNotifications: async (skip = 0, limit = 50) => {
-    const response = await api.get(`/notifications/?skip=${skip}&limit=${limit}`);
+    const response = await api.get(`/notifications?skip=${skip}&limit=${limit}`);
     return response.data;
   },
 

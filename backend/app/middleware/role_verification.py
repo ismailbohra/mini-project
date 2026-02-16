@@ -1,6 +1,6 @@
 """Middleware to verify user role hasn't been modified."""
 
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -11,10 +11,37 @@ from app.auth.repository import AuthRepository
 from app.config.database import get_session
 from app.utils.exceptions import UnauthorizedException
 from app.utils.logging import get_logger
-from app.utils.redis import get_user_role_from_cache, set_user_role_in_cache
+from app.utils.redis import delete_cache, get_cache, set_cache
 from app.utils.security import decode_token
 
 logger = get_logger(__name__)
+
+# Role cache configuration
+ROLE_CACHE_KEY_PREFIX = "user_role:"
+ROLE_CACHE_EXPIRY = 3600  # 1 hour
+
+
+def get_role_cache_key(user_id: int) -> str:
+    """Generate Redis key for user role cache."""
+    return f"{ROLE_CACHE_KEY_PREFIX}{user_id}"
+
+
+async def get_user_role_from_cache(user_id: int) -> Optional[str]:
+    """Get user role from Redis cache."""
+    key = get_role_cache_key(user_id)
+    return await get_cache(key)
+
+
+async def set_user_role_in_cache(user_id: int, role: str) -> bool:
+    """Set user role in Redis cache with expiry."""
+    key = get_role_cache_key(user_id)
+    return await set_cache(key, role, expire=ROLE_CACHE_EXPIRY)
+
+
+async def clear_user_role_cache(user_id: int) -> bool:
+    """Clear user role from Redis cache."""
+    key = get_role_cache_key(user_id)
+    return await delete_cache(key)
 
 
 class RoleVerificationMiddleware(BaseHTTPMiddleware):

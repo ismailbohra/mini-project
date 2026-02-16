@@ -47,6 +47,11 @@ class AuthService:
             if not user.is_active:
                 raise UnauthorizedException("User account is inactive")
 
+            # Update role cache on login to ensure it's fresh
+            from app.middleware.role_verification import set_user_role_in_cache
+
+            await set_user_role_in_cache(user.id, user.role.value)
+
             # Generate access token
             token_data = self._create_token_data(user)
             access_token = create_access_token(

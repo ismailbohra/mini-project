@@ -206,7 +206,7 @@ async def client(setup_test_database) -> AsyncGenerator[AsyncClient, None]:
         patch("redis.asyncio.from_url", return_value=mock_redis_client),
     ):
         async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test/api"
+            transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             yield ac
 
@@ -237,7 +237,7 @@ def sync_client(setup_test_database) -> Generator[TestClient, None, None]:
         ),
         patch("redis.asyncio.from_url", return_value=mock_redis_client),
     ):
-        with TestClient(app, base_url="http://test/api") as client:
+        with TestClient(app, base_url="http://test") as client:
             yield client
 
     app.dependency_overrides.clear()

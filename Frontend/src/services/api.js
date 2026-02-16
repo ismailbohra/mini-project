@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -86,16 +87,8 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      if (status === 403) {
+      return Promise.reject(error);
 
-        if (currentPath === '/forbidden') {
-          const { store } = await import('../store');
-          store.dispatch(logout());
-          return Promise.reject(error);
-        }
-
-        window.location.href = '/forbidden';
-      }
     }
 
     return Promise.reject(error);

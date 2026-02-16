@@ -346,7 +346,7 @@ class PostRepository(PostRepositoryInterface):
         from datetime import datetime
 
         report.status = ReportStatus[status.upper()]
-        if status.upper() in ["REVIEWED", "DISMISSED"]:
+        if status.upper() in ["REVIEWED", "DELETED"]:
             report.reviewed_at = datetime.utcnow()
         await self.session.commit()
         await self.session.refresh(report)

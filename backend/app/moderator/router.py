@@ -23,7 +23,7 @@ async def get_pending_post_reports(
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Get all post reports (pending, reviewed, dismissed). Moderator only."""
+    """Get all post reports (pending, reviewed, deleted). Moderator only."""
     return await moderator_service.get_pending_post_reports(skip, limit)
 
 
@@ -34,11 +34,11 @@ async def get_pending_post_reports(
 )
 async def update_post_report_status(
     report_id: int,
-    status_value: str = Query(..., pattern="^(Reviewed|Dismissed)$"),
+    status_value: str = Query(..., pattern="^(Reviewed|Deleted)$"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Update post report status to Reviewed or Dismissed. Moderator only."""
+    """Update post report status to Reviewed or Deleted. Moderator only."""
     return await moderator_service.update_post_report_status(report_id, status_value)
 
 
@@ -53,7 +53,7 @@ async def get_pending_comment_reports(
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Get all comment reports (pending, reviewed, dismissed). Moderator only."""
+    """Get all comment reports (pending, reviewed, deleted). Moderator only."""
     return await moderator_service.get_pending_comment_reports(skip, limit)
 
 
@@ -64,11 +64,11 @@ async def get_pending_comment_reports(
 )
 async def update_comment_report_status(
     report_id: int,
-    status_value: str = Query(..., pattern="^(Reviewed|Dismissed)$"),
+    status_value: str = Query(..., pattern="^(Reviewed|Deleted)$"),
     _: bool = Depends(require_moderator),
     moderator_service: ModeratorService = Depends(get_moderator_service),
 ):
-    """Update comment report status to Reviewed or Dismissed. Moderator only."""
+    """Update comment report status to Reviewed or Deleted. Moderator only."""
     return await moderator_service.update_comment_report_status(report_id, status_value)
 
 

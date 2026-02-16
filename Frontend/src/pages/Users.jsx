@@ -42,7 +42,7 @@ const Users = () => {
       toast.success('User role updated successfully');
       loadUsers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update user role');
+      toast.error(error.response?.data?.error?.message || 'Failed to update user role');
     }
   };
 
@@ -57,7 +57,7 @@ const Users = () => {
       toast.success(`User ${updated.is_active ? 'activated' : 'deactivated'} successfully`);
       loadUsers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || `Failed to ${action} user`);
+      toast.error(error.response?.data?.error?.message || `Failed to ${action} user`);
     }
   };
 

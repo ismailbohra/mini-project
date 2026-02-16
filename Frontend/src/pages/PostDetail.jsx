@@ -136,7 +136,7 @@ const PostDetail = () => {
       await postService.reportPost(postId, reason);
       toast.success('Post reported successfully');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to report post');
+      toast.error(error.response?.data?.error?.message || 'Failed to report post');
     }
   };
 

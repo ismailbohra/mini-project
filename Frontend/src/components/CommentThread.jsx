@@ -97,7 +97,7 @@ const CommentThread = ({ comment, postId, onUpdate, onDelete, level = 0 }) => {
       await commentService.reportComment(comment.id, reason);
       toast.success('Comment reported successfully');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to report comment');
+      toast.error(error.response?.data?.error?.message || 'Failed to report comment');
     }
   };
 

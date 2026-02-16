@@ -103,7 +103,7 @@ const CreatePost = () => {
         navigate('/my-posts');
       }, 1000);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create post');
+      toast.error(error.response?.data?.error?.message || 'Failed to create post');
     } finally {
       setLoading(false);
     }

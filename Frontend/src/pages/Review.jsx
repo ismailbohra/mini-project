@@ -6,7 +6,7 @@ import moderatorService from '../services/moderatorService';
 
 const Review = () => {
   const [activeTab, setActiveTab] = useState('posts');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, Pending, Reviewed, Dismissed
+  const [statusFilter, setStatusFilter] = useState('all'); // all, Pending, Reviewed, Deleted
   const [postReports, setPostReports] = useState([]);
   const [commentReports, setCommentReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,6 @@ const Review = () => {
     all: postReports.length,
     Pending: postReports.filter(r => r.status === 'Pending').length,
     Reviewed: postReports.filter(r => r.status === 'Reviewed').length,
-    Dismissed: postReports.filter(r => r.status === 'Dismissed').length,
     Deleted: postReports.filter(r => r.status === 'Deleted').length,
   };
 
@@ -106,7 +105,6 @@ const Review = () => {
     all: commentReports.length,
     Pending: commentReports.filter(r => r.status === 'Pending').length,
     Reviewed: commentReports.filter(r => r.status === 'Reviewed').length,
-    Dismissed: commentReports.filter(r => r.status === 'Dismissed').length,
     Deleted: commentReports.filter(r => r.status === 'Deleted').length,
   };
 
@@ -174,19 +172,6 @@ const Review = () => {
           Reviewed ({activeTab === 'posts' ? postStatusCounts.Reviewed : commentStatusCounts.Reviewed})
         </button>
         <button
-          type="button"
-          className={`btn btn-sm ${statusFilter === 'Dismissed' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-          onClick={() => setStatusFilter('Dismissed')}
-        >
-          Dismissed ({activeTab === 'posts' ? postStatusCounts.Dismissed : commentStatusCounts.Dismissed})
-        </button>
-        <button
-          type="button"
-          className={`btn btn-sm ${statusFilter === 'Deleted' ? 'btn-danger' : 'btn-outline-danger'}`}
-          onClick={() => setStatusFilter('Deleted')}
-        >
-          Deleted ({activeTab === 'posts' ? postStatusCounts.Deleted : commentStatusCounts.Deleted})
-        </button>        <button
           type="button"
           className={`btn btn-sm ${statusFilter === 'Deleted' ? 'btn-danger' : 'btn-outline-danger'}`}
           onClick={() => setStatusFilter('Deleted')}
@@ -261,13 +246,6 @@ const Review = () => {
                             >
                               <i className="bi bi-check-circle me-1"></i>
                               Mark Reviewed
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handlePostReportStatus(report.id, 'Dismissed')}
-                            >
-                              <i className="bi bi-x-circle me-1"></i>
-                              Dismiss
                             </button>
                             <button
                               className="btn btn-sm btn-outline-danger"
@@ -352,13 +330,6 @@ const Review = () => {
                             >
                               <i className="bi bi-check-circle me-1"></i>
                               Mark Reviewed
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => handleCommentReportStatus(report.id, 'Dismissed')}
-                            >
-                              <i className="bi bi-x-circle me-1"></i>
-                              Dismiss
                             </button>
                             <button
                               className="btn btn-sm btn-outline-danger"

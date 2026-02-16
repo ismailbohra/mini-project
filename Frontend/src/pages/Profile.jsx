@@ -70,7 +70,7 @@ const Profile = () => {
         confirmNewPassword: '',
       });
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update password');
+      toast.error(error.response?.data?.error?.message || 'Failed to update password');
     } finally {
       setLoadingPassword(false);
     }
@@ -95,7 +95,7 @@ const Profile = () => {
       setProfileImage(null);
       setImagePreview(null);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update profile');
+      toast.error(error.response?.data?.error?.message || 'Failed to update profile');
     } finally {
       setLoadingUsername(false);
     }

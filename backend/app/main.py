@@ -73,6 +73,7 @@ app = FastAPI(
     description="Backend API for Mini Project",
     version="1.0.0",
     lifespan=lifespan,
+    root_path="/api",
 )
 
 app.add_exception_handler(AppException, app_exception_handler)

@@ -1,8 +1,10 @@
+from datetime import datetime
 from typing import Optional
 
 from app.auth.interface import AuthRepositoryInterface
+from app.auth.model import PasswordResetToken
 from app.users.model import RoleType, User
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -54,3 +56,34 @@ class AuthRepository(AuthRepositoryInterface):
         await self.session.commit()
         await self.session.refresh(user)
         return user
+
+    async def create_password_reset_token(
+        self, user_id: int, token: str, expires_at: datetime
+    ) -> PasswordResetToken:
+        """Create a password reset token."""
+        reset_token = PasswordResetToken(
+            user_id=user_id, token=token, expires_at=expires_at, is_used=False
+        )
+        self.session.add(reset_token)
+        await self.session.commit()
+        await self.session.refresh(reset_token)
+        return reset_token
+
+    async def get_password_reset_token(self, token: str) -> Optional[PasswordResetToken]:
+        """Get password reset token by token string."""
+        query = select(PasswordResetToken).where(PasswordResetToken.token == token)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def mark_token_as_used(self, token: PasswordResetToken) -> PasswordResetToken:
+        """Mark password reset token as used."""
+        token.is_used = True
+        await self.session.commit()
+        await self.session.refresh(token)
+        return token
+
+    async def delete_user_reset_tokens(self, user_id: int) -> None:
+        """Delete all password reset tokens for a user."""
+        query = delete(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        await self.session.execute(query)
+        await self.session.commit()

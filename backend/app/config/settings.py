@@ -26,6 +26,21 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     LOG_LEVEL: str = "INFO"
     ASSETS_DIR: str = "app/assets"  # Relative to backend root
+
+    # SMTP Configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+    SMTP_FROM_EMAIL: str
+    SMTP_FROM_NAME: str = "Mini Project"
+
+    # Server Configuration
+    SERVER_URL: str = "http://localhost:3000"
+
+    # Password Reset Configuration
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+
     model_config = SettingsConfigDict(env_file=ENV_DIR, extra="ignore")
 
     @property

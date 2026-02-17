@@ -31,6 +31,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -40,6 +41,7 @@ class UserResponse(UserBase):
     updated_at: datetime
     role: str
     profile_image: Optional[str] = None
+    bio: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

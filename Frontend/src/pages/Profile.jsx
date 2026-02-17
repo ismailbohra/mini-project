@@ -17,6 +17,7 @@ const Profile = () => {
   });
 
   const [username, setUsername] = useState(user?.username || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -79,8 +80,8 @@ const Profile = () => {
   const handleUsernameSubmit = async (e) => {
     e.preventDefault();
     
-    if (!username.trim() && !profileImage) {
-      toast.error('Please provide username or profile image');
+    if (username.trim() === user?.username && !profileImage && bio === user.bio) {
+      toast.error('No changes detected');
       return;
     }
 
@@ -88,7 +89,8 @@ const Profile = () => {
     try {
       const updatedUser = await authService.updateUser(
         username.trim() !== user?.username ? username : null,
-        profileImage
+        profileImage,
+        bio.trim() !== user?.bio ? bio : null
       );
       dispatch(setUser(updatedUser));
       toast.success('Profile updated successfully');
@@ -149,6 +151,10 @@ const Profile = () => {
               <label className="fw-bold">Member Since:</label>
               <p className="mb-0">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</p>
             </div>
+            <div className="col-12 mb-3">
+              <label className="fw-bold">Bio:</label>
+              <p className="mb-0">{user?.bio || 'No bio yet'}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -172,6 +178,19 @@ const Profile = () => {
                 onChange={(e) => setUsername(e.target.value)}
               />
               <small className="text-muted">Current: {user?.username}</small>
+            </div>
+            <div className="mb-3">
+              <label htmlFor="bio" className="form-label">
+                Bio
+              </label>
+              <textarea
+                className="form-control"
+                id="bio"
+                rows="3"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+              <small className="text-muted">Tell us a little about yourself</small>
             </div>
             <div className="mb-3">
               <label htmlFor="profileImage" className="form-label">
@@ -211,7 +230,7 @@ const Profile = () => {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loadingUsername || (username === user?.username && !profileImage)}
+              disabled={loadingUsername || (username === user?.username && bio === user?.bio && !profileImage)}
             >
               {loadingUsername ? (
                 <>

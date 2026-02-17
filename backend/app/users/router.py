@@ -84,6 +84,7 @@ async def search_users_for_mentions(
 async def update_user(
     username: str | None = Form(None),
     password: str | None = Form(None),
+    bio: str | None = Form(None),
     profile_image: UploadFile | None = File(None),
     service: UserService = Depends(get_user_service),
     user_id: int = Depends(get_current_user_id),
@@ -97,5 +98,8 @@ async def update_user(
         update_payload["username"] = username
     if password is not None:
         update_payload["password"] = password
+    if bio is not None:
+        update_payload["bio"] = bio
+    
     user_update = UserUpdate(**update_payload)
     return await service.update_user(user_id, user_update, profile_image=image_path)

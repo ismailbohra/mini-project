@@ -47,6 +47,7 @@ class UserService:
                 "role": user.role.value,
                 "email": user.email,
                 "profile_image": user.profile_image,
+                "bio": user.bio,
                 "is_active": user.is_active,
                 "is_deleted": user.is_deleted,
                 "created_at": user.created_at.isoformat() if user.created_at else None,

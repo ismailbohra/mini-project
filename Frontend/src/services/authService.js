@@ -43,11 +43,14 @@ export const authService = {
     return response.data;
   },
 
-  // Update username and profile image
-  updateUser: async (username = null, profileImage = null) => {
+  // Update username, profile image and bio
+  updateUser: async (username = null, profileImage = null, bio = null) => {
     const formData = new FormData();
     if (username) {
       formData.append('username', username);
+    }
+    if (bio !== null) {
+      formData.append('bio', bio);
     }
     if (profileImage) {
       formData.append('profile_image', profileImage);

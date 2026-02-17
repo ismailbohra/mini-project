@@ -21,7 +21,7 @@ from app.utils.exceptions import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from app.utils.logging import get_logger, init_logging
+from app.utils.logging import close_logging, get_logger, init_logging
 
 init_logging()
 logger = get_logger(__name__)
@@ -64,6 +64,8 @@ async def lifespan(app: FastAPI):
     # Disconnect centralized Redis client
     await redis_client.disconnect()
     logger.info("Redis client disconnected")
+
+    close_logging()
 
 
 app = FastAPI(

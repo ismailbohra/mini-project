@@ -81,23 +81,54 @@ class WebSocketManager {
         } else if (data.type === 'post_updated' && data.data) {
           console.log('[WebSocket] Post updated:', data.data);
           const { post_id, likes_count, comments_count, user_has_liked } = data.data;
-          store.dispatch(updatePostLikesCount({
-            postId: post_id,
-            likesCount: likes_count,
-            userHasLiked: user_has_liked,
-          }));
-          store.dispatch(updatePostCommentsCount({
-            postId: post_id,
-            commentsCount: comments_count,
-          }));
+          
+          // Check current state to avoid redundant updates
+          const state = store.getState();
+          const existingPost = state.posts.posts.find(p => p.id === post_id) || 
+                              (state.posts.currentPost?.id === post_id ? state.posts.currentPost : null);
+          
+          // Only dispatch if values have actually changed
+          const shouldUpdate = !existingPost || 
+            existingPost.likes_count !== likes_count || 
+            existingPost.user_has_liked !== user_has_liked ||
+            existingPost.comments_count !== comments_count;
+          
+          if (shouldUpdate) {
+            store.dispatch(updatePostLikesCount({
+              postId: post_id,
+              likesCount: likes_count,
+              userHasLiked: user_has_liked,
+            }));
+            store.dispatch(updatePostCommentsCount({
+              postId: post_id,
+              commentsCount: comments_count,
+            }));
+          } else {
+            console.log('[WebSocket] Skipping duplicate post_updated message');
+          }
         } else if (data.type === 'comment_updated' && data.data) {
           console.log('[WebSocket] Comment updated:', data.data);
           const { post_id, comment_id, likes_count, user_has_liked, post_comments_count } = data.data;
-          store.dispatch(updateCommentLikesCount({
-            commentId: comment_id,
-            likesCount: likes_count,
-            userHasLiked: user_has_liked,
-          }));
+          
+          // Check current state to avoid redundant updates
+          const state = store.getState();
+          const existingComment = state.comments.comments.find(c => c.id === comment_id);
+          
+          // Only dispatch if values have actually changed
+          const shouldUpdateComment = !existingComment || 
+            existingComment.likes_count !== likes_count || 
+            existingComment.user_has_liked !== user_has_liked;
+          
+          if (shouldUpdateComment) {
+            store.dispatch(updateCommentLikesCount({
+              commentId: comment_id,
+              likesCount: likes_count,
+              userHasLiked: user_has_liked,
+            }));
+          } else {
+            console.log('[WebSocket] Skipping duplicate comment_updated message');
+          }
+          
           store.dispatch(updatePostCommentsCount({
             postId: post_id,
             commentsCount: post_comments_count,

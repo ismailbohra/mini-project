@@ -14,17 +14,41 @@ const notificationSlice = createSlice({
   initialState,
   reducers: {
     setNotifications: (state, action) => {
-      state.notifications = action.payload;
-      state.unreadCount = action.payload.filter(n => !n.is_read).length;
+      // Deduplicate notifications based on unique constraint criteria
+      const uniqueNotifications = [];
+      const seen = new Set();
+      
+      for (const notification of action.payload) {
+        const key = `${notification.receiver_id}-${notification.actor_id}-${notification.type}-${notification.post_id || 'null'}-${notification.comment_id || 'null'}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueNotifications.push(notification);
+        }
+      }
+      
+      state.notifications = uniqueNotifications;
+      state.unreadCount = uniqueNotifications.filter(n => !n.is_read).length;
       state.initialLoadComplete = true;
     },
     addNotification: (state, action) => {
-      const exists = state.notifications.some(n => n.id === action.payload.id);
-      if (!exists) {
-        state.notifications = [action.payload, ...state.notifications];
-        if (!action.payload.is_read) {
+      const newNotification = action.payload;
+      // Check both by ID and by unique constraint criteria
+      const existsById = state.notifications.some(n => n.id === newNotification.id);
+      const existsByContent = state.notifications.some(n => 
+        n.receiver_id === newNotification.receiver_id &&
+        n.actor_id === newNotification.actor_id &&
+        n.type === newNotification.type &&
+        (n.post_id || null) === (newNotification.post_id || null) &&
+        (n.comment_id || null) === (newNotification.comment_id || null)
+      );
+      
+      if (!existsById && !existsByContent) {
+        state.notifications = [newNotification, ...state.notifications];
+        if (!newNotification.is_read) {
           state.unreadCount += 1;
         }
+      } else {
+        console.log('[NotificationSlice] Duplicate notification blocked:', newNotification);
       }
     },
     markAsRead: (state, action) => {

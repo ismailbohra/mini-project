@@ -1,12 +1,16 @@
 from typing import List, Optional
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import app.utils.redis as redis_utils
 from app.notifications.interface import NotificationRepositoryInterface
 from app.notifications.model import Notification
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class NotificationRepository(NotificationRepositoryInterface):
@@ -20,28 +24,58 @@ class NotificationRepository(NotificationRepositoryInterface):
         type: str,
         post_id: Optional[int] = None,
         comment_id: Optional[int] = None,
-    ) -> Notification:
-        notification = Notification(
-            receiver_id=receiver_id,
-            actor_id=actor_id,
-            type=type,
-            post_id=post_id,
-            comment_id=comment_id,
-        )
-        self.session.add(notification)
-        await self.session.commit()
-        await self.session.refresh(notification)
-
-        query = (
+    ) -> Optional[Notification]:
+        # Check if notification already exists
+        existing_query = (
             select(Notification)
-            .where(Notification.id == notification.id)
+            .where(
+                and_(
+                    Notification.receiver_id == receiver_id,
+                    Notification.actor_id == actor_id,
+                    Notification.type == type,
+                    Notification.post_id == post_id,
+                    Notification.comment_id == comment_id,
+                )
+            )
             .options(selectinload(Notification.actor))
         )
-        result = await self.session.execute(query)
+        result = await self.session.execute(existing_query)
+        existing = result.scalar_one_or_none()
 
-        await redis_utils.delete_cache(f"notifications:unread:{receiver_id}")
+        if existing:
+            logger.debug(
+                f"Notification already exists: {existing.id} - returning None to prevent duplicate WebSocket send"
+            )
+            return None
 
-        return result.scalar_one()
+        try:
+            notification = Notification(
+                receiver_id=receiver_id,
+                actor_id=actor_id,
+                type=type,
+                post_id=post_id,
+                comment_id=comment_id,
+            )
+            self.session.add(notification)
+            await self.session.commit()
+            await self.session.refresh(notification)
+
+            query = (
+                select(Notification)
+                .where(Notification.id == notification.id)
+                .options(selectinload(Notification.actor))
+            )
+            result = await self.session.execute(query)
+
+            await redis_utils.delete_cache(f"notifications:unread:{receiver_id}")
+
+            return result.scalar_one()
+        except IntegrityError as e:
+            logger.warning(f"Duplicate notification prevented: {e}")
+            await self.session.rollback()
+            # Try to fetch the existing notification
+            result = await self.session.execute(existing_query)
+            return result.scalar_one_or_none()
 
     async def get_user_notifications(
         self, user_id: int, skip: int = 0, limit: int = 50

@@ -13,7 +13,7 @@ class NotificationRepositoryInterface(ABC):
         type: str,
         post_id: Optional[int] = None,
         comment_id: Optional[int] = None,
-    ) -> Notification:
+    ) -> Optional[Notification]:
         pass
 
     @abstractmethod

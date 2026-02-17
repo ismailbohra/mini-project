@@ -26,23 +26,24 @@ async def on_comment_created(payload: dict):
                     comment_id=comment_id,
                 )
 
-                await ws_manager.send_to_user(
-                    post_author_id,
-                    {
-                        "type": "notification",
-                        "notification": {
-                            "id": notification.id,
-                            "receiver_id": notification.receiver_id,
-                            "actor_id": notification.actor_id,
-                            "actor_username": notification.actor.username,
-                            "type": notification.type,
-                            "post_id": notification.post_id,
-                            "comment_id": notification.comment_id,
-                            "is_read": notification.is_read,
-                            "created_at": notification.created_at.isoformat(),
+                if notification:
+                    await ws_manager.send_to_user(
+                        post_author_id,
+                        {
+                            "type": "notification",
+                            "notification": {
+                                "id": notification.id,
+                                "receiver_id": notification.receiver_id,
+                                "actor_id": notification.actor_id,
+                                "actor_username": notification.actor.username,
+                                "type": notification.type,
+                                "post_id": notification.post_id,
+                                "comment_id": notification.comment_id,
+                                "is_read": notification.is_read,
+                                "created_at": notification.created_at.isoformat(),
+                            },
                         },
-                    },
-                )
+                    )
 
         # Broadcast comment to all connected users for real-time updates
         from app.comments.repository import CommentRepository
@@ -118,23 +119,24 @@ async def on_comment_replied(payload: dict):
                     comment_id=comment_id,
                 )
 
-                await ws_manager.send_to_user(
-                    parent_author_id,
-                    {
-                        "type": "notification",
-                        "notification": {
-                            "id": notification.id,
-                            "receiver_id": notification.receiver_id,
-                            "actor_id": notification.actor_id,
-                            "actor_username": notification.actor.username,
-                            "type": notification.type,
-                            "post_id": notification.post_id,
-                            "comment_id": notification.comment_id,
-                            "is_read": notification.is_read,
-                            "created_at": notification.created_at.isoformat(),
+                if notification:
+                    await ws_manager.send_to_user(
+                        parent_author_id,
+                        {
+                            "type": "notification",
+                            "notification": {
+                                "id": notification.id,
+                                "receiver_id": notification.receiver_id,
+                                "actor_id": notification.actor_id,
+                                "actor_username": notification.actor.username,
+                                "type": notification.type,
+                                "post_id": notification.post_id,
+                                "comment_id": notification.comment_id,
+                                "is_read": notification.is_read,
+                                "created_at": notification.created_at.isoformat(),
+                            },
                         },
-                    },
-                )
+                    )
 
         # Broadcast reply to all connected users for real-time updates
         from app.comments.repository import CommentRepository
@@ -214,6 +216,13 @@ async def on_post_liked(payload: dict):
                 type="post_liked",
                 post_id=post_id,
             )
+
+            if not notification:
+                logger.debug(
+                    "Duplicate notification prevented - skipping websocket send"
+                )
+                return
+
             logger.debug(f"Notification created: {notification.id}")
 
             await ws_manager.send_to_user(
@@ -263,6 +272,13 @@ async def on_comment_liked(payload: dict):
                 post_id=post_id,
                 comment_id=comment_id,
             )
+
+            if not notification:
+                logger.debug(
+                    "Duplicate notification prevented - skipping websocket send"
+                )
+                return
+
             logger.debug(f"Notification created: {notification.id}")
 
             await ws_manager.send_to_user(
@@ -523,6 +539,13 @@ async def on_post_user_mentioned(payload: dict):
                 type="post_user_mentioned",
                 post_id=post_id,
             )
+
+            if not notification:
+                logger.debug(
+                    "Duplicate notification prevented - skipping websocket send"
+                )
+                return
+
             logger.debug(f"Mention notification created: {notification.id}")
 
             # Send WebSocket notification
@@ -577,6 +600,13 @@ async def on_comment_user_mentioned(payload: dict):
                 post_id=post_id,
                 comment_id=comment_id,
             )
+
+            if not notification:
+                logger.debug(
+                    "Duplicate notification prevented - skipping websocket send"
+                )
+                return
+
             logger.debug(f"Mention notification created: {notification.id}")
 
             # Send WebSocket notification

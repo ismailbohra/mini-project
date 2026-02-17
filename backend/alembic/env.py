@@ -5,6 +5,12 @@ from app.config.database import Base
 from app.config.settings import settings
 from sqlalchemy import engine_from_config, pool
 
+# Import all models to ensure they are registered with Base metadata
+from app.users.model import User
+from app.posts.model import Posts, Tags, PostTag, PostLike, PostReport, PostMention
+from app.comments.model import Comment, CommentLike, CommentReport, CommentMention
+from app.notifications.model import Notification
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

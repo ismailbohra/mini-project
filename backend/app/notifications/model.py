@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config.database import Base
@@ -9,6 +9,16 @@ from app.config.database import Base
 
 class Notification(Base):
     __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint(
+            "receiver_id",
+            "actor_id",
+            "type",
+            "post_id",
+            "comment_id",
+            name="uq_notification_action",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     receiver_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

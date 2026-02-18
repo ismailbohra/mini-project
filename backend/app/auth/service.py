@@ -1,15 +1,21 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict
+import secrets
 
 from app.auth.repository import AuthRepository
 from app.auth.schema import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserLoginRequest,
     UserResponse,
 )
+from app.config.settings import settings
 from app.users.model import User
+from app.utils.email import email_service
 from app.utils.exceptions import (
+    BadRequestException,
     InvalidPasswordException,
     NotFoundException,
     UnauthorizedException,
@@ -131,3 +137,107 @@ class AuthService:
             updated_at=user.updated_at,
             role=user.role.value,
         )
+
+    async def forgot_password(self, request: ForgotPasswordRequest) -> Dict[str, str]:
+        """Send password reset email to user."""
+        try:
+            # Get user by email
+            user = await self.repository.get_user_by_email(request.email)
+
+            # Always return success message to prevent email enumeration
+            success_message = {
+                "message": "If the email exists, a password reset link has been sent."
+            }
+
+            if not user:
+                logger.info(f"Password reset requested for non-existent email: {request.email}")
+                return success_message
+
+            if not user.is_active:
+                logger.info(f"Password reset requested for inactive user: {request.email}")
+                return success_message
+
+            # Generate secure reset token
+            reset_token = secrets.token_urlsafe(32)
+
+            # Calculate expiration time
+            expires_at = datetime.utcnow() + timedelta(
+                minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+            )
+
+            # Delete any existing reset tokens for this user
+            await self.repository.delete_user_reset_tokens(user.id)
+
+            # Create new reset token
+            await self.repository.create_password_reset_token(
+                user_id=user.id, token=reset_token, expires_at=expires_at
+            )
+
+            # Send password reset email
+            email_sent = await email_service.send_password_reset_email(
+                to_email=user.email, username=user.username, reset_token=reset_token
+            )
+
+            if email_sent:
+                logger.info(f"Password reset email sent to {user.email}")
+            else:
+                logger.error(f"Failed to send password reset email to {user.email}")
+
+            return success_message
+
+        except Exception as e:
+            logger.exception(f"Error in forgot_password for {request.email}: {e}")
+            # Return success message even on error to prevent information disclosure
+            return {
+                "message": "If the email exists, a password reset link has been sent."
+            }
+
+    async def reset_password(self, request: ResetPasswordRequest) -> Dict[str, str]:
+        """Reset user password using reset token."""
+        try:
+            # Get reset token from database
+            reset_token = await self.repository.get_password_reset_token(request.token)
+
+            if not reset_token:
+                raise BadRequestException("Invalid or expired reset token")
+
+            # Check if token is already used
+            if reset_token.is_used:
+                raise BadRequestException("Reset token has already been used")
+
+            # Check if token is expired
+            if datetime.utcnow() > reset_token.expires_at:
+                raise BadRequestException("Reset token has expired")
+
+            # Get user
+            user = await self.repository.get_user_by_id(reset_token.user_id)
+
+            if not user:
+                raise NotFoundException("User not found")
+
+            if not user.is_active:
+                raise BadRequestException("User account is inactive")
+
+            # Validate new password
+            validate_password(request.new_password)
+
+            # Hash new password
+            new_hashed_password = get_password_hash(request.new_password)
+
+            # Update password
+            await self.repository.update_user_password(user, new_hashed_password)
+
+            # Mark token as used
+            await self.repository.mark_token_as_used(reset_token)
+
+            # Delete all other reset tokens for this user
+            await self.repository.delete_user_reset_tokens(user.id)
+
+            logger.info(f"Password reset successfully for user {user.email}")
+            return {"message": "Password reset successfully. You can now login with your new password."}
+
+        except (BadRequestException, NotFoundException, InvalidPasswordException):
+            raise
+        except Exception as e:
+            logger.exception(f"Error in reset_password: {e}")
+            raise

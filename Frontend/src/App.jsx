@@ -12,6 +12,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import PostDetail from './pages/PostDetail';
 import CreatePost from './pages/CreatePost';
@@ -33,6 +35,8 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/forbidden" element={<Forbidden />} />
           <Route path="/role-changed" element={<RoleChanged />} />
 

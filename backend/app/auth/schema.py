@@ -12,6 +12,15 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=100)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., example="user@example.com")
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., description="Password reset token from email")
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

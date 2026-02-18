@@ -38,7 +38,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app/assets:/app/app/assets
-      - ./backend/app.log:/app/app.log
+      - ./backend/logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy

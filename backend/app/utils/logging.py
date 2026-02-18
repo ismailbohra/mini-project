@@ -34,7 +34,10 @@ def _setup_queue_listener():
         console_handler.setFormatter(formatter)
 
         # File Handler
-        log_file = Path("app.log")
+        log_file = Path("logs/app.log")
+        log_file.parent.mkdir(
+            exist_ok=True
+        )  # Create logs directory if it doesn't exist
         file_handler = RotatingFileHandler(
             log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
         )

@@ -111,15 +111,6 @@ class EmailService:
                     padding: 30px;
                     border-radius: 0 0 5px 5px;
                 }}
-                .button {{
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background-color: #4F46E5;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    margin: 20px 0;
-                }}
                 .footer {{
                     text-align: center;
                     margin-top: 20px;
@@ -136,9 +127,13 @@ class EmailService:
                 <div class="content">
                     <p>Hello {username},</p>
                     <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                    <div style="text-align: center;">
-                        <a href="{reset_url}" class="button">Reset Password</a>
-                    </div>
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">
+                        <tr>
+                            <td style="background-color: #4F46E5; border-radius: 5px; padding: 0;">
+                                <a href="{reset_url}" style="display: inline-block; padding: 12px 30px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+                            </td>
+                        </tr>
+                    </table>
                     <p>Or copy and paste this link into your browser:</p>
                     <p style="word-break: break-all; color: #4F46E5;">{reset_url}</p>
                     <p><strong>This link will expire in {settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES} minutes.</strong></p>

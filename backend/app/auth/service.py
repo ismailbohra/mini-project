@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 from app.auth.repository import AuthRepository
@@ -166,7 +166,7 @@ class AuthService:
             reset_token = secrets.token_urlsafe(32)
 
             # Calculate expiration time
-            expires_at = datetime.utcnow() + timedelta(
+            expires_at = datetime.now(timezone.utc) + timedelta(
                 minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
             )
 
@@ -211,7 +211,7 @@ class AuthService:
                 raise BadRequestException("Reset token has already been used")
 
             # Check if token is expired
-            if datetime.utcnow() > reset_token.expires_at:
+            if datetime.now(timezone.utc) > reset_token.expires_at:
                 raise BadRequestException("Reset token has expired")
 
             # Get user

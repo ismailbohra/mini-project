@@ -1,6 +1,6 @@
+import secrets
 from datetime import datetime, timedelta
 from typing import Any, Dict
-import secrets
 
 from app.auth.repository import AuthRepository
 from app.auth.schema import (
@@ -19,6 +19,7 @@ from app.utils.exceptions import (
     InvalidPasswordException,
     NotFoundException,
     UnauthorizedException,
+    UserNotFoundException,
 )
 from app.utils.logging import get_logger
 from app.utils.security import (
@@ -43,7 +44,7 @@ class AuthService:
             user = await self.repository.get_user_by_email(request.email)
 
             if not user:
-                raise UnauthorizedException("Invalid username or password")
+                raise UserNotFoundException("Invalid username or password")
 
             # Verify password
             if not verify_password(request.password, user.hashed_password):
@@ -150,11 +151,15 @@ class AuthService:
             }
 
             if not user:
-                logger.info(f"Password reset requested for non-existent email: {request.email}")
+                logger.info(
+                    f"Password reset requested for non-existent email: {request.email}"
+                )
                 return success_message
 
             if not user.is_active:
-                logger.info(f"Password reset requested for inactive user: {request.email}")
+                logger.info(
+                    f"Password reset requested for inactive user: {request.email}"
+                )
                 return success_message
 
             # Generate secure reset token
@@ -234,7 +239,9 @@ class AuthService:
             await self.repository.delete_user_reset_tokens(user.id)
 
             logger.info(f"Password reset successfully for user {user.email}")
-            return {"message": "Password reset successfully. You can now login with your new password."}
+            return {
+                "message": "Password reset successfully. You can now login with your new password."
+            }
 
         except (BadRequestException, NotFoundException, InvalidPasswordException):
             raise

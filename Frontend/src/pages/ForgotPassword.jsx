@@ -77,7 +77,7 @@ const ForgotPassword = () => {
           ) : (
             <div className="alert alert-success">
               <i className="bi bi-check-circle me-2"></i>
-              Check your email for a password reset link. If you don't see it, please check your spam folder.
+              If an account with that email exists, you will receive a password reset link shortly.
             </div>
           )}
 
